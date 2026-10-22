@@ -79,21 +79,47 @@ onUnmounted(() => {
 </template>
 
 <style lang="stylus" scoped>
+// The frame art has its line ~18px inside its edge, so the photo sits in 24px padding and keeps the 340x190 ratio.
 .MediaList
-    margin 8em 2em
+    margin 8em 0
+    padding 0 1px
     display flex
-    flex-wrap wrap
-    align-items flex-start
-    justify-content center
-    gap 2em
+    flex-direction column
+    align-items center
+    gap 1em
 
     &-item
-        width calc(50% - 1em)
-        aspect-ratio 1/1
-        margin 0 auto
+        display block
+        width 100%
+        max-width 388px
+        padding 24px
         position relative
+        outline none
 
-        &-thumbnail
+        &:before
+            content " "
+            position absolute
+            z-index 10
+            top 0
+            left 0
             width 100%
             height 100%
+            background url(@/assets/images/ui/frame.svg) center / 100% 100% no-repeat
+            pointer-events none
+
+        &:hover:before
+        &:focus-visible:before
+            background-image url(@/assets/images/ui/frame-hover.svg)
+
+        &:hover &-thumbnail
+        &:focus-visible &-thumbnail
+            filter brightness(1.15)
+
+        &-thumbnail
+            display block
+            width 100%
+            aspect-ratio 340 / 190
+            object-fit cover
+            background rgba(0, 0, 0, 0.4)
+            transition filter 0.2s ease
 </style>
