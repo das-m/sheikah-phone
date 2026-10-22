@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
 import { RouterLink, RouterView, useRoute } from 'vue-router'
+import InstallGate from './components/InstallGate.vue'
 import SheikahLoader from './components/SheikahLoader.vue'
 import { playSound } from './lib/audio'
 
@@ -54,6 +55,8 @@ playSound(audio_open)
       </div>
       <div class="Phone-header-right"></div>
     </header>
+
+    <InstallGate />
 
     <main class="Phone-main" id="main">
       <SheikahLoader :show="showLoader" />

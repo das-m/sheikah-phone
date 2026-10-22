@@ -62,7 +62,7 @@ const message = computed(() => {
         <div class="App-sensor-icon" :class="{ 'is-playing': isPulsing }"></div>
         <div class="App-sensor-blob" :class="{ 'is-playing': isPulsing }"></div>
 
-        <InfoText :title="title" :message="message" />
+        <InfoText class="App-sensor-info" :title="title" :message="message" />
       </div>
       <div class="App-sensor App-sensor--disabled" v-else>
         <div class="App-sensor-icon App-sensor-icon--disabled"></div>
@@ -87,6 +87,14 @@ const message = computed(() => {
         aspect-ratio 1
         width 80%
         max-width 500px
+
+        &-info
+            position absolute
+            top 72%
+            left 0
+            right 0
+            margin 0 auto
+            pointer-events none
 
         &-icon
             position absolute

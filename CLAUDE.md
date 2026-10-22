@@ -10,7 +10,7 @@ Target: Android Chrome, installed as a PWA, used outdoors and often offline. iOS
 
 ## Layout
 - `src/views/apps/*App.vue`: the five apps (map, sensor, camera, media, reader). Thin: UI only.
-- `src/composables/`: browser-API wrappers (`useGeolocation`, `useHeading`, `useBeeper`, `useCamera`).
+- `src/composables/`: browser-API wrappers (`useGeolocation`, `useHeading`, `useBeeper`, `useCamera`, `useNfc`, `useInstall`).
 - `src/lib/`: pure functions with unit tests (`geo.ts`). Put new maths here, test it.
 - `src/game/`: game content as data (POIs, sensor target and tuning). Riddles, keys and targets go here, never hardcoded in components.
 - `src/map/`: MapLibre style (BotW look) on OpenFreeMap vector tiles. Public service without guarantee: self-host as PMTiles before the real hunt.
@@ -23,6 +23,9 @@ Target: Android Chrome, installed as a PWA, used outdoors and often offline. iOS
 - Sounds are `.ogg`.
 
 ## Gotchas
+- Web NFC (Reader) and the beeper both need a tap first: the browser asks permission and blocks audio until then.
+- `InstallGate` only shows in production builds in a browser tab. Chrome fires `beforeinstallprompt` once, so `useInstall` captures it at module load.
+- Visual checks: build, `npx vite preview`, screenshot with headless Chromium. Headless has no Web NFC, so the Reader shows its unsupported state there.
 - The map needs no API key. Never commit keys.
 - MapLibre markers own their element's `transform`: rotate a child element, never the marker element. Its worker is wired via `setWorkerUrl` in `MapApp.vue` (without it the map is blank in dev and production).
 - Do not edit `dist/`. `dev-dist/` and `*:Zone.Identifier` files are ignored.
