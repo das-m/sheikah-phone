@@ -1,6 +1,10 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-const currentWeatherData = ref(null)
+interface CurrentWeather {
+  weather: { temperature: number; icon: string }
+}
+
+const currentWeatherData = ref<CurrentWeather | null>(null)
 
 onMounted(() => {
   if (navigator.geolocation) {
@@ -8,7 +12,7 @@ onMounted(() => {
   }
 })
 
-function getWeatherData(position: any) {
+function getWeatherData(position: GeolocationPosition) {
   const apiURL =
     'https://api.brightsky.dev/current_weather?lat=' +
     position.coords.latitude +
@@ -17,33 +21,23 @@ function getWeatherData(position: any) {
   fetch(apiURL)
     .then((response) => {
       if (!response.ok) throw new Error(`Bright Sky responded with ${response.status}`)
-      return response.json()
+      return response.json() as Promise<CurrentWeather>
     })
     .then((data) => (currentWeatherData.value = data))
     .catch((error) => console.error(error))
 }
 
-function geolocationError(error: any) {
+function geolocationError(error: GeolocationPositionError) {
   console.error(`ERROR(${error.code}): ${error.message}`)
 }
 
-const currentTemperature = computed(() => {
-  let output: string = ''
-  if (currentWeatherData.value != null) {
-    const data: any = currentWeatherData.value
-    output = data.weather.temperature + '°C'
-  }
-  return output
-})
+const currentTemperature = computed(() =>
+  currentWeatherData.value ? currentWeatherData.value.weather.temperature + '°C' : ''
+)
 
-const currentIconClass = computed(() => {
-  let icon: string | null = null
-  if (currentWeatherData.value != null) {
-    const data: any = currentWeatherData.value
-    icon = data.weather.icon
-  }
-  return 'WeatherWidget-icon--' + icon
-})
+const currentIconClass = computed(
+  () => 'WeatherWidget-icon--' + (currentWeatherData.value?.weather.icon ?? null)
+)
 </script>
 
 <template>

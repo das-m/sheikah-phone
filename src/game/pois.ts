@@ -4,6 +4,10 @@ import markerIconCastle from '@/assets/images/map/castle.png'
 import markerIconGate from '@/assets/images/map/gate.png'
 import markerIconFountain from '@/assets/images/map/fountain.png'
 import markerIconStable from '@/assets/images/map/stable.png'
+import markerIconSnake from '@/assets/images/map/snake.png'
+import markerIconWell from '@/assets/images/map/well.png'
+import markerIconFrog from '@/assets/images/map/frog.png'
+import markerIconBottle from '@/assets/images/map/bargainer.png'
 import type { LatLng } from '@/lib/geo'
 
 export interface Poi {
@@ -12,8 +16,6 @@ export interface Poi {
   icon: string
 }
 
-// TODO(verify): Schorndorfer and Aldinger Torhaus share identical coordinates, so one of them is a placeholder.
-// TODO(verify): Zugstation Ludwigsburg and Bahnhof Ludwigsburg are the same point (duplicate marker).
 export const pois: Poi[] = [
   {
     title: 'Ludwigsburg',
@@ -82,8 +84,8 @@ export const pois: Poi[] = [
   {
     title: 'Schorndorfer Torhaus',
     position: {
-      lat: 48.8945931,
-      lng: 9.1740354
+      lat: 48.895806,
+      lng: 9.203389
     },
     icon: markerIconGate
   },
@@ -98,8 +100,8 @@ export const pois: Poi[] = [
   {
     title: 'Aldinger Torhaus',
     position: {
-      lat: 48.8945931,
-      lng: 9.1740354
+      lat: 48.886904,
+      lng: 9.203264
     },
     icon: markerIconGate
   },
@@ -181,7 +183,7 @@ export const pois: Poi[] = [
       lat: 48.9070897,
       lng: 9.1977192
     },
-    icon: markerIconHome
+    icon: markerIconSnake
   },
   {
     title: 'Steinbruch der Goronen',
@@ -189,7 +191,7 @@ export const pois: Poi[] = [
       lat: 48.907582,
       lng: 9.2161755
     },
-    icon: markerIconHome
+    icon: markerIconWell
   },
   {
     title: 'Kakariko',
@@ -205,7 +207,7 @@ export const pois: Poi[] = [
       lat: 48.910297,
       lng: 9.2122332
     },
-    icon: markerIconHome
+    icon: markerIconFrog
   },
   {
     title: 'Kurhotel',
@@ -213,21 +215,13 @@ export const pois: Poi[] = [
       lat: 48.90973260393466,
       lng: 9.214576968240936
     },
-    icon: markerIconHome
+    icon: markerIconBottle
   },
   {
     title: 'Vergessene Wälder',
     position: {
       lat: 48.89686900463565,
       lng: 9.163170767901905
-    },
-    icon: markerIconStable
-  },
-  {
-    title: 'Zugstation Ludwigsburg',
-    position: {
-      lat: 48.892308609476544,
-      lng: 9.185691454480875
     },
     icon: markerIconStable
   },

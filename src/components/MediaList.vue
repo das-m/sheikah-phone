@@ -8,7 +8,7 @@ const props = defineProps({
   images: { type: Array<MediaImage> }
 })
 
-let lightbox: any
+let lightbox: PhotoSwipeLightbox | null = null
 
 onMounted(() => {
   if (!lightbox) {
@@ -25,6 +25,25 @@ onMounted(() => {
       counter: false,
       pswpModule: () => import('photoswipe'),
       appendToEl: document.querySelector('#main') as HTMLElement | undefined
+    })
+
+    lightbox.on('uiRegister', () => {
+      lightbox?.pswp?.ui?.registerElement({
+        name: 'caption',
+        order: 9,
+        isButton: false,
+        appendTo: 'root',
+        onInit: (el, pswp) => {
+          pswp.on('change', () => {
+            const anchor = pswp.currSlide?.data.element
+            const title = document.createElement('h2')
+            title.textContent = anchor?.dataset.title ?? ''
+            const description = document.createElement('p')
+            description.textContent = anchor?.dataset.description ?? ''
+            el.replaceChildren(title, description)
+          })
+        }
+      })
     })
 
     lightbox.init()
@@ -47,6 +66,8 @@ onUnmounted(() => {
       :href="image.largeURL"
       :data-pswp-width="image.width"
       :data-pswp-height="image.height"
+      :data-title="image.title"
+      :data-description="image.description"
       class="MediaList-item"
       target="_blank"
       rel="noreferrer"
