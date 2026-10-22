@@ -4,10 +4,10 @@ import markerIconCastle from '@/assets/images/map/castle.png'
 import markerIconGate from '@/assets/images/map/gate.png'
 import markerIconFountain from '@/assets/images/map/fountain.png'
 import markerIconStable from '@/assets/images/map/stable.png'
-import markerIconSnake from '@/assets/images/map/snake.png'
-import markerIconWell from '@/assets/images/map/well.png'
-import markerIconFrog from '@/assets/images/map/frog.png'
-import markerIconBottle from '@/assets/images/map/bargainer.png'
+import markerIconGerudo from '@/assets/images/map/gerudo.png'
+import markerIconGoron from '@/assets/images/map/goron.png'
+import markerIconZora from '@/assets/images/map/zora.png'
+import markerIconKurhotel from '@/assets/images/map/kurhotel.png'
 import type { LatLng } from '@/lib/geo'
 
 export interface Poi {
@@ -185,7 +185,7 @@ export const pois: Poi[] = [
       lat: 48.9070897,
       lng: 9.1977192
     },
-    icon: markerIconSnake
+    icon: markerIconGerudo
   },
   {
     title: 'Steinbruch der Goronen',
@@ -193,7 +193,7 @@ export const pois: Poi[] = [
       lat: 48.907582,
       lng: 9.2161755
     },
-    icon: markerIconWell
+    icon: markerIconGoron
   },
   {
     title: 'Kakariko',
@@ -209,7 +209,7 @@ export const pois: Poi[] = [
       lat: 48.910297,
       lng: 9.2122332
     },
-    icon: markerIconFrog
+    icon: markerIconZora
   },
   {
     title: 'Kurhotel',
@@ -217,7 +217,7 @@ export const pois: Poi[] = [
       lat: 48.90973260393466,
       lng: 9.214576968240936
     },
-    icon: markerIconBottle
+    icon: markerIconKurhotel
   },
   {
     title: 'Vergessene Wälder',
