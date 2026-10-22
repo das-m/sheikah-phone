@@ -1,6 +1,9 @@
 <script setup lang="ts">
-import { GoogleMap, Marker, CustomMarker } from 'vue3-google-map'
-import { computed, onUnmounted, ref, watch } from 'vue'
+import * as maplibregl from 'maplibre-gl'
+import 'maplibre-gl/dist/maplibre-gl.css'
+// MapLibre looks for its worker next to its own module, which does not exist once bundled.
+import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?url'
+import { onMounted, onUnmounted, ref, watch } from 'vue'
 
 import ClockWidget from '@/components/widgets/ClockWidget.vue'
 import WeatherWidget from '@/components/widgets/WeatherWidget.vue'
@@ -8,9 +11,9 @@ import { useGeolocation } from '@/composables/useGeolocation'
 import { useHeading } from '@/composables/useHeading'
 import { pois } from '@/game/pois'
 import type { LatLng } from '@/lib/geo'
-import { zeldaMapStyles } from '@/map/zeldaStyles'
+import { zeldaStyle } from '@/map/zeldaStyle'
 
-const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string | undefined
+maplibregl.setWorkerUrl(workerUrl)
 
 const ludwigsburg: LatLng = { lat: 48.897551, lng: 9.191567 }
 const INTRO_DELAY_MS = 2500
@@ -18,55 +21,95 @@ const INTRO_DELAY_MS = 2500
 const { position: userPosition } = useGeolocation()
 const { heading } = useHeading()
 
-const mapCenter = ref<LatLng>(ludwigsburg)
+const container = ref<HTMLElement | null>(null)
 const isActive = ref(false)
 
+let map: maplibregl.Map | null = null
+let userMarker: maplibregl.Marker | null = null
+let userArrowEl: HTMLElement | null = null
+
+const toLngLat = (p: LatLng): [number, number] => [p.lng, p.lat]
+
+function createPoiMarker(poi: { title: string; icon: string }): HTMLElement {
+  const el = document.createElement('img')
+  el.src = poi.icon
+  el.alt = poi.title
+  el.title = poi.title
+  el.className = 'App-map-poi'
+  return el
+}
+
+function createUserMarker(): HTMLElement {
+  const el = document.createElement('div')
+  el.className = 'App-map-position'
+  el.style.zIndex = '10'
+  // MapLibre owns the transform of the marker element, so the heading rotates a child.
+  userArrowEl = document.createElement('div')
+  userArrowEl.className = 'App-map-position-arrow'
+  el.appendChild(userArrowEl)
+  return el
+}
+
 const introTimer = setTimeout(() => (isActive.value = true), INTRO_DELAY_MS)
-onUnmounted(() => clearTimeout(introTimer))
+
+onMounted(() => {
+  if (!container.value) return
+  map = new maplibregl.Map({
+    container: container.value,
+    style: zeldaStyle,
+    center: toLngLat(userPosition.value ?? ludwigsburg),
+    zoom: 16,
+    attributionControl: { compact: true }
+  })
+
+  for (const poi of pois) {
+    new maplibregl.Marker({ element: createPoiMarker(poi) })
+      .setLngLat(toLngLat(poi.position))
+      .addTo(map)
+  }
+
+  // A GPS fix may have arrived before the map existed.
+  if (userPosition.value) updateUserMarker(userPosition.value)
+})
+
+onUnmounted(() => {
+  clearTimeout(introTimer)
+  map?.remove()
+  map = null
+})
+
+function updateUserMarker(position: LatLng) {
+  if (!map) return
+  if (!userMarker) {
+    userMarker = new maplibregl.Marker({ element: createUserMarker() })
+      .setLngLat(toLngLat(position))
+      .addTo(map)
+  } else {
+    userMarker.setLngLat(toLngLat(position))
+  }
+}
+
+watch(userPosition, (position) => position && updateUserMarker(position), { immediate: true })
 
 // Follow the user once, on the first GPS fix. After that the recenter button is in control.
 const stopWatchingFirstFix = watch(userPosition, (position) => {
   if (!position) return
-  mapCenter.value = { ...position }
+  map?.easeTo({ center: toLngLat(position) })
   stopWatchingFirstFix()
 })
 
-function centerMapOnUser() {
-  // A fresh object is required: the map only moves when the `center` prop changes identity.
-  if (userPosition.value) mapCenter.value = { ...userPosition.value }
-}
+watch(heading, (value) => {
+  if (userArrowEl) userArrowEl.style.transform = `rotate(${value ?? 0}deg)`
+})
 
-const userLocationMarker = computed(() => ({
-  anchorPoint: 'CENTER' as const,
-  position: userPosition.value ?? ludwigsburg,
-  zIndex: 999
-}))
+function centerMapOnUser() {
+  if (userPosition.value) map?.easeTo({ center: toLngLat(userPosition.value), zoom: 17 })
+}
 </script>
 
 <template>
   <div class="App">
-    <GoogleMap
-      class="App-map"
-      :api-key="apiKey"
-      :center="mapCenter"
-      :zoom="17"
-      :disable-default-ui="true"
-      :styles="zeldaMapStyles"
-      v-if="isActive && apiKey"
-    >
-      <CustomMarker :options="userLocationMarker" v-if="userPosition">
-        <div
-          class="App-map-position"
-          :style="{ transform: 'rotate(' + (heading ?? 0) + 'deg)' }"
-        ></div>
-      </CustomMarker>
-
-      <Marker v-for="poi in pois" :key="poi.title" :options="poi" />
-    </GoogleMap>
-
-    <p class="App-map-error" v-if="isActive && !apiKey">
-      Kein Google-Maps-Schlüssel gesetzt (VITE_GOOGLE_MAPS_API_KEY in .env.local).
-    </p>
+    <div ref="container" class="App-map"></div>
 
     <Transition name="fade" delay="1000" appear>
       <div v-if="isActive">
@@ -92,19 +135,20 @@ const userLocationMarker = computed(() => ({
         width 100%
         height 100%
 
-        &-error
-            position absolute
-            top 50%
-            width 100%
-            padding 0 2em
-            text-align center
-            color var(--color-red)
-
-        &-position
-            background url(@/assets/images/map/user.svg) center no-repeat
-            background-size contain
+        // elements created by MapLibre carry no scope id, hence :deep
+        :deep(&-position)
             width 50px
             height 50px
+
+        :deep(&-position-arrow)
+            width 100%
+            height 100%
+            background url(@/assets/images/map/user.svg) center no-repeat
+            background-size contain
+
+        :deep(&-poi)
+            width 32px
+            height 32px
 
         &-button
             width 80px

@@ -13,7 +13,7 @@ Target: Android Chrome, installed as a PWA, used outdoors and often offline. iOS
 - `src/composables/`: browser-API wrappers (`useGeolocation`, `useHeading`, `useBeeper`, `useCamera`).
 - `src/lib/`: pure functions with unit tests (`geo.ts`). Put new maths here, test it.
 - `src/game/`: game content as data (POIs, sensor target and tuning). Riddles, keys and targets go here, never hardcoded in components.
-- `src/map/`: Google map style (deprecated JSON styling, to be replaced by MapLibre).
+- `src/map/`: MapLibre style (BotW look) on OpenFreeMap vector tiles. Public service without guarantee: self-host as PMTiles before the real hunt.
 
 ## Conventions
 - Styles: Stylus, scoped, BEM-like `Block-element--modifier`. Colors via CSS vars from `src/assets/styl/variables.styl`.
@@ -23,7 +23,8 @@ Target: Android Chrome, installed as a PWA, used outdoors and often offline. iOS
 - Sounds are `.ogg`.
 
 ## Gotchas
-- The Google Maps key comes from `VITE_GOOGLE_MAPS_API_KEY` in `.env.local` (see `.env.example`). Never commit keys.
+- The map needs no API key. Never commit keys.
+- MapLibre markers own their element's `transform`: rotate a child element, never the marker element. Its worker is wired via `setWorkerUrl` in `MapApp.vue` (without it the map is blank in dev and production).
 - Do not edit `dist/`. `dev-dist/` and `*:Zone.Identifier` files are ignored.
 - Heading uses `deviceorientationabsolute` (Android only). Test location, heading and camera on a real phone, not only on desktop.
 - `src/components/experiments/*.vue_` are old, uncompiled experiments (including an older Web NFC reader). Reference only.

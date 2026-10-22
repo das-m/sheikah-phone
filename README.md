@@ -8,7 +8,6 @@ Apps: Map, Sensor (beeps faster as you near the target), Camera, Media, Reader (
 
 ```sh
 npm install
-cp .env.example .env.local   # add a Google Maps API key, restricted to your domain
 npm run dev
 ```
 

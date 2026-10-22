@@ -16,8 +16,20 @@ export default defineConfig({
       //strategies: 'injectManifest',
       workbox: {
         // Cache everything the app needs so it keeps working offline in the field.
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,jpg,ogg,ttf,otf,webmanifest}'],
-        navigateFallback: 'index.html'
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,jpg,ogg,ttf,otf,mjs,webmanifest}'],
+        navigateFallback: 'index.html',
+        // Tiles seen once stay available offline (partial coverage until PMTiles are self-hosted).
+        runtimeCaching: [
+          {
+            urlPattern: /^https:\/\/tiles\.openfreemap\.org\//,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'map-tiles',
+              expiration: { maxEntries: 3000, maxAgeSeconds: 60 * 60 * 24 * 90 },
+              cacheableResponse: { statuses: [0, 200] }
+            }
+          }
+        ]
       },
       manifest: {
         name: 'SheikahPhone™',
