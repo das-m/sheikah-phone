@@ -1,0 +1,31 @@
+
+*
+*::before
+*::after
+  box-sizing border-box
+  margin 0
+  font-weight normal
+
+body
+  min-height 100vh
+  color var(--color-contrast)
+  background var(--color-base) url(@/assets/images/background/background.png) repeat
+  transition
+    color 0.5s,
+    background-color 0.5s;
+  line-height 1.6
+  font-family sans-serif
+  font-size 16px
+  text-rendering optimizeLegibility
+  -webkit-font-smoothing antialiased
+  -moz-osx-font-smoothing grayscale
+
+a
+  text-decoration none
+
+#app
+  position relative
+  height 100vh
+  width 100vw
+  overflow hidden
+  font-family "OpenSans", sans-serif
