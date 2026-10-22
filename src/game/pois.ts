@@ -16,6 +16,8 @@ export interface Poi {
   icon: string
 }
 
+// Torhaus positions: OpenStreetMap, matching de.wikipedia "Ludwigsburger Torhäuser".
+// Marbacher Torhaus no longer exists (removed 1950 for Marbacher Straße); its position is approximate.
 export const pois: Poi[] = [
   {
     title: 'Ludwigsburg',
@@ -68,16 +70,16 @@ export const pois: Poi[] = [
   {
     title: 'Heilbronner Torhaus',
     position: {
-      lat: 48.9022941,
-      lng: 9.1912123
+      lat: 48.902293,
+      lng: 9.193812
     },
     icon: markerIconGate
   },
   {
     title: 'Stuttgarter Torhaus',
     position: {
-      lat: 48.888894,
-      lng: 9.189103
+      lat: 48.888887,
+      lng: 9.193957
     },
     icon: markerIconGate
   },
@@ -92,8 +94,8 @@ export const pois: Poi[] = [
   {
     title: 'Pflugfelder Torhaus',
     position: {
-      lat: 48.8904332,
-      lng: 9.1837984
+      lat: 48.89083,
+      lng: 9.183373
     },
     icon: markerIconGate
   },
@@ -108,8 +110,8 @@ export const pois: Poi[] = [
   {
     title: 'Asperger Torhaus',
     position: {
-      lat: 48.8945931,
-      lng: 9.1781185
+      lat: 48.897503,
+      lng: 9.182989
     },
     icon: markerIconGate
   },
