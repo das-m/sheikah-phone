@@ -10,11 +10,13 @@
     "build-only": "vite build",
     "type-check": "vue-tsc --build --force",
     "lint": "eslint . --ext .vue,.js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts --fix --ignore-path .gitignore",
-    "format": "prettier --write src/"
+    "format": "prettier --write src/",
+    "test": "vitest run",
+    "lint:check": "eslint . --ext .vue,.js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts --ignore-path .gitignore",
+    "check": "run-s type-check lint:check test"
   },
   "dependencies": {
     "photoswipe": "^5.4.3",
-    "rupture": "^0.7.1",
     "vue": "^3.4.21",
     "vue-router": "^4.3.0",
     "vue3-google-map": "^0.20.0"
@@ -32,10 +34,10 @@
     "npm-run-all2": "^6.1.2",
     "prettier": "^3.2.5",
     "stylus": "^0.63.0",
-    "stylus-loader": "^8.1.0",
     "typescript": "~5.4.0",
     "vite": "^5.2.8",
     "vite-plugin-pwa": "^0.19.8",
-    "vue-tsc": "^2.0.11"
+    "vue-tsc": "^2.0.11",
+    "vitest": "^2.1.9"
   }
 }

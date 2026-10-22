@@ -1,19 +1,11 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { onMounted, onUnmounted } from 'vue'
 import PhotoSwipeLightbox from 'photoswipe/lightbox'
 import 'photoswipe/style.css'
-
-interface image {
-  title?: string | null
-  description?: string | null
-  largeURL?: string | undefined
-  thumbnailURL?: string | undefined
-  width?: number | null
-  height?: number | null
-}
+import type { MediaImage } from '@/types/media'
 
 const props = defineProps({
-  images: { type: Array<image> }
+  images: { type: Array<MediaImage> }
 })
 
 let lightbox: any
@@ -33,21 +25,6 @@ onMounted(() => {
       counter: false,
       pswpModule: () => import('photoswipe'),
       appendToEl: document.querySelector('#main') as HTMLElement | undefined
-    })
-
-    lightbox.on('uiRegister', function () {
-      lightbox.pswp.ui.registerElement({
-        name: 'test-button',
-        ariaLabel: 'Toggle zoom',
-        order: 9,
-        isButton: true,
-        html: 'Test',
-        onClick: () => {
-          if (confirm('Do you want to toggle zoom?')) {
-            lightbox.pswp.toggleZoom()
-          }
-        }
-      })
     })
 
     lightbox.init()

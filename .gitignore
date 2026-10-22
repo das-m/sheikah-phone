@@ -29,4 +29,10 @@ coverage
 
 *.tsbuildinfo
 
-/package-lock.json
+# Windows/WSL download markers
+*:Zone.Identifier
+
+# generated service worker (dev)
+dev-dist
+
+.env.local

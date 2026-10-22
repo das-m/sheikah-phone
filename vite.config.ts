@@ -14,12 +14,18 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       //strategies: 'injectManifest',
-      devOptions: {
-        enabled: true
+      workbox: {
+        // Cache everything the app needs so it keeps working offline in the field.
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,jpg,ogg,ttf,otf,webmanifest}'],
+        navigateFallback: 'index.html'
       },
       manifest: {
         name: 'SheikahPhone™',
         short_name: 'SheikahPhone',
+        id: '/',
+        start_url: '/',
+        lang: 'de',
+        orientation: 'portrait',
         description: '△△△',
         theme_color: '#3CD3FC',
         background_color: '#000000',
@@ -56,12 +62,4 @@ export default defineConfig({
       '@': fileURLToPath(new URL('./src', import.meta.url))
     }
   }
-  //css: {
-  //  loaderOptions: {
-  //    stylus: {
-  //      use: [require('rupture')()],
-  //      import: ['~rupture/rupture/index.styl']
-  //    }
-  //  }
-  //}
 })

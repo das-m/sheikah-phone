@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, onMounted, onUnmounted } from 'vue'
-let clockworkInterval: number
+let clockworkInterval: ReturnType<typeof setInterval>
 const time = ref(new Date())
 
 onMounted(() => {

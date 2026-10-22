@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 const currentWeatherData = ref(null)
-const isReady = ref(false)
 
 onMounted(() => {
   if (navigator.geolocation) {
@@ -16,8 +15,12 @@ function getWeatherData(position: any) {
     '&lon=' +
     position.coords.longitude
   fetch(apiURL)
-    .then((response) => response.json())
+    .then((response) => {
+      if (!response.ok) throw new Error(`Bright Sky responded with ${response.status}`)
+      return response.json()
+    })
     .then((data) => (currentWeatherData.value = data))
+    .catch((error) => console.error(error))
 }
 
 function geolocationError(error: any) {

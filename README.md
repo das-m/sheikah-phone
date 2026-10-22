@@ -1,39 +1,24 @@
-# sheikah-phone
+# SheikahPhone
 
-This template should help get you started developing with Vue 3 in Vite.
+A reimagined Sheikah Slate from *Breath of the Wild*, built as a PWA for a Zelda-themed scavenger hunt in Ludwigsburg. Players receive it through an NFC tag and install it on their phone (Android Chrome).
 
-## Recommended IDE Setup
+Apps: Map, Sensor (beeps faster as you near the target), Camera, Media, Reader (NFC, not implemented yet).
 
-[VSCode](https://code.visualstudio.com/) + [Volar](https://marketplace.visualstudio.com/items?itemName=Vue.volar) (and disable Vetur).
-
-## Type Support for `.vue` Imports in TS
-
-TypeScript cannot handle type information for `.vue` imports by default, so we replace the `tsc` CLI with `vue-tsc` for type checking. In editors, we need [Volar](https://marketplace.visualstudio.com/items?itemName=Vue.volar) to make the TypeScript language service aware of `.vue` types.
-
-## Customize configuration
-
-See [Vite Configuration Reference](https://vitejs.dev/config/).
-
-## Project Setup
+## Setup
 
 ```sh
 npm install
-```
-
-### Compile and Hot-Reload for Development
-
-```sh
+cp .env.example .env.local   # add a Google Maps API key, restricted to your domain
 npm run dev
 ```
 
-### Type-Check, Compile and Minify for Production
+## Commands
 
-```sh
-npm run build
-```
+| Command | What it does |
+| --- | --- |
+| `npm run dev` | Dev server |
+| `npm run build` | Type-check and production build |
+| `npm run check` | Type-check, lint and unit tests |
+| `npm run format` | Format `src/` with Prettier |
 
-### Lint with [ESLint](https://eslint.org/)
-
-```sh
-npm run lint
-```
+See `CLAUDE.md` for architecture and conventions.

@@ -2,44 +2,48 @@
 import { ref, watch } from 'vue'
 import { RouterLink, RouterView, useRoute } from 'vue-router'
 import SheikahLoader from './components/SheikahLoader.vue'
+import { playSound } from './lib/audio'
 
 // init audio
-import sound_open from './assets/audio/open.wav'
-import sound_close from './assets/audio/close.wav'
+import sound_open from './assets/audio/open.ogg'
+import sound_close from './assets/audio/close.ogg'
 const audio_open = new Audio(sound_open)
 const audio_close = new Audio(sound_close)
 
 // init loader
+const LOADER_MS = 1200
 const showLoader = ref(false)
 const route = useRoute()
 
 const isBackButtonActive = ref(false)
 
-// do a `console.log(route)` to see route attributes (fullPath, hash, params, path...)
 watch(
   () => route.fullPath,
-  async () => {
+  () => {
     show()
 
     if (route.name == 'home') {
-      audio_close.play()
+      playSound(audio_close)
       isBackButtonActive.value = false
     } else {
-      audio_open.play()
+      playSound(audio_open)
       isBackButtonActive.value = true
     }
   }
 )
 
+let loaderTimer: ReturnType<typeof setTimeout> | undefined
+
 function show() {
   showLoader.value = true
-  setTimeout(() => {
+  clearTimeout(loaderTimer)
+  loaderTimer = setTimeout(() => {
     showLoader.value = false
-  }, 1200)
+  }, LOADER_MS)
 }
 
 show()
-audio_open.play()
+playSound(audio_open)
 </script>
 
 <template>
