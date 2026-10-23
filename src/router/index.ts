@@ -1,5 +1,8 @@
+import { watch } from 'vue'
 import { createRouter, createWebHistory } from 'vue-router'
 import HomeView from '../views/HomeView.vue'
+import { useYigaMode } from '../composables/useYigaMode'
+import { isRouteAvailable } from '../game/apps'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -36,8 +39,23 @@ const router = createRouter({
       path: '/reader',
       name: 'reader',
       component: () => import('../views/apps/ReaderApp.vue')
+    },
+    {
+      path: '/yiga',
+      name: 'yiga',
+      component: () => import('../views/apps/YigaApp.vue')
     }
   ]
+})
+
+const { mode } = useYigaMode()
+
+// Each mode has its own set of apps: deep links and stale history entries fall back to the home screen.
+router.beforeEach((to) => (isRouteAvailable(to.path, mode.value) ? true : { name: 'home' }))
+
+watch(mode, () => {
+  if (!isRouteAvailable(router.currentRoute.value.path, mode.value))
+    router.replace({ name: 'home' })
 })
 
 export default router

@@ -1,35 +1,41 @@
 <script setup lang="ts">
+import { computed, ref } from 'vue'
 import ClockWidget from './../components/widgets/ClockWidget.vue'
 import WeatherWidget from './../components/widgets/WeatherWidget.vue'
+import { useYigaMode } from '@/composables/useYigaMode'
+import { apps } from '@/game/apps'
+
 const version = APP_VERSION
+
+const { mode, forceInZone } = useYigaMode()
+const visibleApps = computed(() => apps.filter((app) => app.mode === mode.value))
+
+// Manual fallback for unreliable GPS: tap the version 7 times to pretend to be inside the Yiga zone.
+const DEBUG_TAPS = 7
+const versionTaps = ref(0)
+function onVersionTap() {
+  versionTaps.value += 1
+  if (versionTaps.value < DEBUG_TAPS) return
+  versionTaps.value = 0
+  forceInZone.value = !forceInZone.value
+}
 </script>
 
 <template>
   <Transition name="fade" appear>
     <div class="Homescreen">
       <div class="Homescreen-apps">
-        <router-link class="Homescreen-apps-item Homescreen-apps-item--map" to="/map"></router-link>
         <router-link
-          class="Homescreen-apps-item Homescreen-apps-item--sensor"
-          to="/sensor"
-        ></router-link>
-        <router-link
-          class="Homescreen-apps-item Homescreen-apps-item--camera"
-          to="/camera"
-        ></router-link>
-        <router-link
-          class="Homescreen-apps-item Homescreen-apps-item--media"
-          to="/media"
-        ></router-link>
-        <router-link
-          class="Homescreen-apps-item Homescreen-apps-item--reader"
-          to="/reader"
+          v-for="app in visibleApps"
+          :key="app.id"
+          :class="['Homescreen-apps-item', `Homescreen-apps-item--${app.id}`]"
+          :to="app.route"
         ></router-link>
       </div>
       <div class="Homescreen-widgets">
         <WeatherWidget />
         <ClockWidget />
-        <div class="Homescreen-widgets-version">v{{ version }}</div>
+        <div class="Homescreen-widgets-version" @click="onVersionTap">v{{ version }}</div>
       </div>
     </div>
   </Transition>
@@ -91,6 +97,10 @@ const version = APP_VERSION
             &--reader
                 &:before
                     background-image url(@/assets/images/ui/icons/reader.svg)
+
+            &--yiga
+                &:before
+                    background-image url(@/assets/images/ui/icons/scanner.svg)
 
     &-widgets
         position absolute

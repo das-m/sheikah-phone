@@ -3,13 +3,11 @@ import { ref, watch } from 'vue'
 import { RouterLink, RouterView, useRoute } from 'vue-router'
 import InstallGate from './components/InstallGate.vue'
 import SheikahLoader from './components/SheikahLoader.vue'
-import { playSound } from './lib/audio'
+import { useYigaMode } from './composables/useYigaMode'
+import { useYigaTrigger } from './composables/useYigaTrigger'
+import { playClose, playOpen } from './lib/uiSounds'
 
-// init audio
-import sound_open from './assets/audio/open.ogg'
-import sound_close from './assets/audio/close.ogg'
-const audio_open = new Audio(sound_open)
-const audio_close = new Audio(sound_close)
+const { mode } = useYigaMode()
 
 // init loader
 const LOADER_MS = 1200
@@ -24,10 +22,10 @@ watch(
     show()
 
     if (route.name == 'home') {
-      playSound(audio_close)
+      playClose(mode.value)
       isBackButtonActive.value = false
     } else {
-      playSound(audio_open)
+      playOpen(mode.value)
       isBackButtonActive.value = true
     }
   }
@@ -44,7 +42,11 @@ function show() {
 }
 
 show()
-playSound(audio_open)
+playOpen(mode.value)
+
+// Yiga mode: flip + shake in the zone; the loader plays on every mode switch
+useYigaTrigger()
+watch(mode, show)
 </script>
 
 <template>

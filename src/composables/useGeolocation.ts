@@ -4,6 +4,8 @@ import type { LatLng } from '@/lib/geo'
 /** Live device position. `position` stays null until the first fix. */
 export function useGeolocation() {
   const position = ref<LatLng | null>(null)
+  /** Horizontal accuracy of the last fix in meters. */
+  const accuracy = ref<number | null>(null)
   const error = ref<GeolocationPositionError | null>(null)
   const isSupported = 'geolocation' in navigator
 
@@ -14,6 +16,7 @@ export function useGeolocation() {
     watchId = navigator.geolocation.watchPosition(
       (p) => {
         position.value = { lat: p.coords.latitude, lng: p.coords.longitude }
+        accuracy.value = p.coords.accuracy
         error.value = null
       },
       (e) => {
@@ -27,5 +30,5 @@ export function useGeolocation() {
     if (watchId !== null) navigator.geolocation.clearWatch(watchId)
   })
 
-  return { position, error, isSupported }
+  return { position, accuracy, error, isSupported }
 }
