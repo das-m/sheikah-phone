@@ -5,6 +5,7 @@ import InstallGate from './components/InstallGate.vue'
 import SheikahLoader from './components/SheikahLoader.vue'
 import { useYigaMode } from './composables/useYigaMode'
 import { useYigaTrigger } from './composables/useYigaTrigger'
+import { isRouteAvailable } from './game/apps'
 import { playClose, playOpen } from './lib/uiSounds'
 
 const { mode } = useYigaMode()
@@ -17,17 +18,16 @@ const route = useRoute()
 const isBackButtonActive = ref(false)
 
 watch(
-  () => route.fullPath,
-  () => {
-    show()
+  () => route.path,
+  (_, oldPath) => {
+    isBackButtonActive.value = route.name !== 'home'
 
-    if (route.name == 'home') {
-      playClose(mode.value)
-      isBackButtonActive.value = false
-    } else {
-      playOpen(mode.value)
-      isBackButtonActive.value = true
-    }
+    // A mode switch redirects away from the other mode's app. The switch already plays its sound and the loader.
+    if (!isRouteAvailable(oldPath, mode.value)) return
+
+    show()
+    if (route.name == 'home') playClose(mode.value)
+    else playOpen(mode.value)
   }
 )
 
@@ -72,89 +72,100 @@ watch(mode, show)
   </div>
 </template>
 
-<style lang="stylus" scoped>
+<style lang="scss" scoped>
+.Phone {
+  position: relative;
+  width: inherit;
+  height: inherit;
+  background: url(@/assets/images/background/background.png);
 
-.Phone
-    position relative
-    width inherit
-    height inherit
-    background url(@/assets/images/background/background.png)
+  &-main {
+    position: absolute;
+    z-index: 1;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+  }
 
-    &-main
-        position absolute
-        z-index 1
-        top 0
-        right 0
-        bottom 0
-        left 0
+  &-footer,
+  &-header {
+    position: fixed;
+    z-index: 100;
+    left: 0;
+    right: 0;
+    display: flex;
+    align-items: stretch;
+    justify-content: flex-start;
+    background: transparent no-repeat;
+    background-size: 100% 100%;
+    pointer-events: none;
 
-    &-footer
-    &-header
-        position fixed
-        z-index 100
-        left 0
-        right 0
-        display flex
-        align-items stretch
-        justify-content flex-start
-        background transparent no-repeat
-        background-size 100% 100%
-        pointer-events none
+    &-left,
+    &-right {
+      aspect-ratio: 1/1;
+      position: absolute;
+      z-index: 10;
+      width: 40vw;
+      max-width: 200px;
+      background: transparent no-repeat;
+      background-size: 100% 100%;
+      flex-shrink: 0;
+    }
+  }
 
-        &-left
-        &-right
-            aspect-ratio 1/1
-            position absolute
-            z-index 10
-            width 40vw
-            max-width 200px
-            background transparent no-repeat
-            background-size 100% 100%
-            flex-shrink 0
+  &-header {
+    top: 0;
+    height: 50px;
+    background-image: url(@/assets/images/background/header-center.png);
+    background-size: 100% 100%;
 
-    &-header
-        top 0
-        height 50px
-        background-image url(@/assets/images/background/header-center.png)
-        background-size 100% 100%
+    &-left {
+      top: 0;
+      left: 0;
+      background-image: url(@/assets/images/background/header-left.png);
 
-        &-left
-            top 0
-            left 0
-            background-image url(@/assets/images/background/header-left.png)
+      &-back {
+        width: 100%;
+        height: 100%;
+        display: block;
+        pointer-events: all;
+        aspect-ratio: 1/1;
+        background: transparent url(@/assets/images/ui/header-left-back.png) no-repeat;
+        background-size: 100% 100%;
+      }
+    }
 
-            &-back
-                width 100%
-                height 100%
-                display block
-                pointer-events all
-                aspect-ratio 1/1
-                background transparent url(@/assets/images/ui/header-left-back.png) no-repeat
-                background-size 100% 100%
+    &-right {
+      top: 0;
+      right: 0;
+      background-image: url(@/assets/images/background/header-right.png);
+    }
+  }
 
-        &-right
-            top 0
-            right 0
-            background-image url(@/assets/images/background/header-right.png)
+  &-footer {
+    bottom: 0;
+    height: 50px;
+    background-image: url(@/assets/images/background/footer-center.png);
+    background-size: 100% 100%;
 
-    &-footer
-        bottom 0
-        height 50px
-        background-image url(@/assets/images/background/footer-center.png)
-        background-size 100% 100%
+    &-left,
+    &-right {
+      width: 20vw;
+      max-width: 100px;
+    }
 
-        &-left
-        &-right
-            width 20vw
-            max-width 100px
+    &-left {
+      bottom: 0;
+      left: 0;
+      background-image: url(@/assets/images/background/footer-left.png);
+    }
 
-        &-left
-            bottom 0
-            left 0
-            background-image url(@/assets/images/background/footer-left.png)
-
-        &-right
-            bottom 0
-            right 0
-            background-image url(@/assets/images/background/footer-right.png)
+    &-right {
+      bottom: 0;
+      right: 0;
+      background-image: url(@/assets/images/background/footer-right.png);
+    }
+  }
+}
 </style>

@@ -65,89 +65,108 @@ const message = computed(() => {
   </Transition>
 </template>
 
-<style lang="stylus" scoped>
-.App
-    width 100%
-    height 100%
-    position relative
-    display flex
-    flex-direction column
-    align-items center
-    justify-content center
+<style lang="scss" scoped>
+.App {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
 
-    &-sensor
-        position relative
-        cursor pointer
-        aspect-ratio 1/1
-        width 80%
-        max-width 500px
+  &-sensor {
+    position: relative;
+    cursor: pointer;
+    aspect-ratio: 1/1;
+    width: 80%;
+    max-width: 500px;
 
-        &-info
-            position absolute
-            top 72%
-            left 0
-            right 0
-            margin 0 auto
-            pointer-events none
+    &-info {
+      position: absolute;
+      top: 72%;
+      left: 0;
+      right: 0;
+      margin: 0 auto;
+      pointer-events: none;
+    }
 
-        &-icon
-            position absolute
-            top 0
-            width 100%
-            height 100%
-            background transparent center no-repeat
-            background-size 40%
-            background-image url(@/assets/images/ui/icons/reader.svg)
-            animation none
-            filter brightness(60%)
+    &-icon {
+      position: absolute;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background: transparent center no-repeat;
+      background-size: 40%;
+      background-image: url(@/assets/images/ui/icons/reader.svg);
+      animation: none;
+      filter: brightness(60%);
 
-            &.is-scanning
-                animation icon-pulse 1s ease infinite
+      &.is-scanning {
+        animation: icon-pulse 1s ease infinite;
+      }
 
-            &--disabled
-                background-image url(@/assets/images/ui/icons/reader.svg)
-                background-size 50%
-                animation none
-                filter grayscale(100%) brightness(-100%)
-                opacity 0.3
+      &--disabled {
+        background-image: url(@/assets/images/ui/icons/reader.svg);
+        background-size: 50%;
+        animation: none;
+        filter: grayscale(100%) brightness(-100%);
+        opacity: 0.3;
+      }
+    }
 
-        &-blob
-            position absolute
-            border solid 8px #9decfd
-            border-radius 50%
-            width 100%
-            height 100%
-            transform scale(1)
-            opacity 0
-            animation none
+    &-blob {
+      position: absolute;
+      border: solid 8px #9decfd;
+      border-radius: 50%;
+      width: 100%;
+      height: 100%;
+      transform: scale(1);
+      opacity: 0;
+      animation: none;
 
-            &.is-scanning
-                animation pulse 2s linear infinite
+      &.is-scanning {
+        animation: pulse 2s linear infinite;
+      }
 
-            &--second
-                animation-delay 1s
+      &--second {
+        animation-delay: 1s;
+      }
+    }
+  }
+}
 
-@keyframes pulse
-	0%
-		transform scale(0.4)
-		opacity 0
-	30%
-		transform scale(0.8)
-		opacity 0.3
-	80%
-		transform scale(2.1)
-		opacity 0
-	100%
-		transform scale(2.1)
-		opacity 0
+@keyframes pulse {
+  0% {
+    transform: scale(0.4);
+    opacity: 0;
+  }
+  30% {
+    transform: scale(0.8);
+    opacity: 0.3;
+  }
+  80% {
+    transform: scale(2.1);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(2.1);
+    opacity: 0;
+  }
+}
 
-@keyframes icon-pulse
-	0%
-		filter brightness(100%)
-	30%
-		filter brightness(80%)
-	80%
-		filter brightness(80%)
-	100%
-		filter brightness(100%)
+@keyframes icon-pulse {
+  0% {
+    filter: brightness(100%);
+  }
+  30% {
+    filter: brightness(80%);
+  }
+  80% {
+    filter: brightness(80%);
+  }
+  100% {
+    filter: brightness(100%);
+  }
+}
 </style>

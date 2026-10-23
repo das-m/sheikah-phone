@@ -36,3 +36,6 @@ coverage
 dev-dist
 
 .env.local
+
+# raw audio drafts
+src/assets/audio/temp/

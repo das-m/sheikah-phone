@@ -84,15 +84,18 @@ const images: MediaImage[] = pictures.map((picture, index) => {
   </Transition>
 </template>
 
-<style lang="stylus" scoped>
-.App
-    width 100%
-    height 100%
-    position relative
+<style lang="scss" scoped>
+.App {
+  width: 100%;
+  height: 100%;
+  position: relative;
 
-    &-media
-        &-scroller
-            width 100%
-            height 100vh
-            overflow auto
+  &-media {
+    &-scroller {
+      width: 100%;
+      height: 100vh;
+      overflow: auto;
+    }
+  }
+}
 </style>

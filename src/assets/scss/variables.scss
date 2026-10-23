@@ -1,0 +1,29 @@
+:root {
+  --sp-color--base: #010710;
+  --sp-color--contrast: #e2ded3;
+  --sp-color--primary: #3cd3fc;
+  --sp-color--primary--hover: #baeffb;
+  --sp-color--secondary: #ffe460;
+  --sp-color--secondary--hover: #fcc413;
+  --sp-color--red: #f15050;
+}
+
+/* semantic color variables for this project */
+:root {
+  --color-base: var(--sp-color--base);
+  --color-contrast: var(--sp-color--contrast);
+  --color-primary: var(--sp-color--primary);
+  --color-primary-hover: var(--sp-color--primary--hover);
+  --color-secondary: var(--sp-color--secondary);
+  --color-secondary-hover: var(--sp-color--secondary--hover);
+  --color-red: var(--sp-color--red);
+
+  --section-gap: 3rem;
+}
+
+/* Yiga mode (set on <html> by useYigaMode): the blue accent turns red */
+:root[data-mode='yiga'] {
+  --sp-color--primary: #f15050;
+  --sp-color--primary--hover: #fbbaba;
+  --sp-color--base: #100301;
+}

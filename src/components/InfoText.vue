@@ -17,55 +17,65 @@ const props = defineProps({
   </div>
 </template>
 
-<style lang="stylus" scoped>
-.InfoText
-    font-style italic
-    width 100%
-    max-width 460px
-    color var(--color-primary)
+<style lang="scss" scoped>
+.InfoText {
+  font-style: italic;
+  width: 100%;
+  max-width: 460px;
+  color: var(--color-primary);
 
-    &-title
-    &-message
-        display block
-        text-align center
-        margin 0 3em
+  &-title,
+  &-message {
+    display: block;
+    text-align: center;
+    margin: 0 3em;
+  }
 
-    &-title
-        font-size 2em
-        text-shadow 0 0 5px var(--color-primary)
-        line-height 1.2
+  &-title {
+    font-size: 2em;
+    text-shadow: 0 0 5px var(--color-primary);
+    line-height: 1.2;
+  }
 
-    &-message
-        font-size 1.2em
+  &-message {
+    font-size: 1.2em;
+  }
 
-    &-line
-        position relative
-        display flex
-        width 100%
-        margin-bottom 0.5em
+  &-line {
+    position: relative;
+    display: flex;
+    width: 100%;
+    margin-bottom: 0.5em;
 
-        &-left
-        &-right
-            display inline-block
-            height 1.3em
+    &-left,
+    &-right {
+      display: inline-block;
+      height: 1.3em;
+    }
 
-        &-left
-        &-right
-            width 2.3em
-            background top no-repeat
-            background-size 100% 100%
+    &-left,
+    &-right {
+      width: 2.3em;
+      background: top no-repeat;
+      background-size: 100% 100%;
+    }
 
-        &-left
-            background-image url(@/assets/images/ui/title-ornament-left.svg)
+    &-left {
+      background-image: url(@/assets/images/ui/title-ornament-left.svg);
+    }
 
-        &-right
-            background-image url(@/assets/images/ui/title-ornament-right.svg)
+    &-right {
+      background-image: url(@/assets/images/ui/title-ornament-right.svg);
+    }
 
-        &-center
-            background var(--color-primary)
-            height 0.13em
-            margin-top 0.57em
-            margin-left -5px
-            margin-right -5px
-            flex-grow 1
+    &-center {
+      background: var(--color-primary);
+      height: 0.13em;
+      margin-top: 0.57em;
+      margin-left: -5px;
+      margin-right: -5px;
+      flex-grow: 1;
+    }
+  }
+}
 </style>

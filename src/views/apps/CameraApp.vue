@@ -29,51 +29,57 @@ watch(hasFailed, (failed) => {
   </Transition>
 </template>
 
-<style lang="stylus" scoped>
-.App
-    width 100%
-    height 100%
-    position relative
+<style lang="scss" scoped>
+.App {
+  width: 100%;
+  height: 100%;
+  position: relative;
 
-    &-camera
-        position absolute
-        top 0
-        width 100%
-        height 100%
-        z-index 10
-        // clip-path circle(55% at 50% 50%)
+  &-camera {
+    position: absolute;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 10;
+    // clip-path circle(55% at 50% 50%)
 
-        &--disabled
-            clip-path none
+    &--disabled {
+      clip-path: none;
+    }
 
-        &-icon
-            background transparent url(@/assets/images/overlay/scope.png) center no-repeat
-            position fixed
-            top 0
-            z-index 30
-            width 100%
-            height 100%
-            display block
-            opacity 0.7
-            pointer-events none
+    &-icon {
+      background: transparent url(@/assets/images/overlay/scope.png) center no-repeat;
+      position: fixed;
+      top: 0;
+      z-index: 30;
+      width: 100%;
+      height: 100%;
+      display: block;
+      opacity: 0.7;
+      pointer-events: none;
 
-            &--disabled
-                position absolute
-                top 0
-                z-index 0
-                width 100%
-                height 100%
-                background transparent center no-repeat
-                background-size 50%
-                background-image url(@/assets/images/ui/icons/camera.svg)
-                filter grayscale(100%) brightness(-100%)
-                opacity 0.3
+      &--disabled {
+        position: absolute;
+        top: 0;
+        z-index: 0;
+        width: 100%;
+        height: 100%;
+        background: transparent center no-repeat;
+        background-size: 50%;
+        background-image: url(@/assets/images/ui/icons/camera.svg);
+        filter: grayscale(100%) brightness(-100%);
+        opacity: 0.3;
+      }
+    }
 
-        video
-            position relative
-            z-index 10
-            width 100%
-            height 100%
-            object-fit cover
-            filter saturate(50%) contrast(150%)
+    video {
+      position: relative;
+      z-index: 10;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      filter: saturate(50%) contrast(150%);
+    }
+  }
+}
 </style>

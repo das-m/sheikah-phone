@@ -24,41 +24,45 @@ const message = computed(() => {
   </Transition>
 </template>
 
-<style lang="stylus" scoped>
-.InstallGate
-    position fixed
-    z-index 200
-    top 0
-    right 0
-    bottom 0
-    left 0
-    display flex
-    flex-direction column
-    align-items center
-    justify-content center
-    gap 2em
-    padding 0 2em
-    background var(--color-base) url(@/assets/images/background/background.png) repeat
+<style lang="scss" scoped>
+.InstallGate {
+  position: fixed;
+  z-index: 200;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2em;
+  padding: 0 2em;
+  background: var(--color-base) url(@/assets/images/background/background.png) repeat;
 
-    &-button
-        padding 1.2em 3em
-        border-image url(@/assets/images/ui/frame.svg) 10 / 20px
-        background rgba(0, 0, 0, 0.4)
-        color var(--color-primary)
-        font-size 1.2em
-        letter-spacing 0.1em
-        text-shadow 0 0 8px var(--color-primary)
-        cursor pointer
+  &-button {
+    padding: 1.2em 3em;
+    border-image: url(@/assets/images/ui/frame.svg) 10 / 20px;
+    background: rgba(0, 0, 0, 0.4);
+    color: var(--color-primary);
+    font-size: 1.2em;
+    letter-spacing: 0.1em;
+    text-shadow: 0 0 8px var(--color-primary);
+    cursor: pointer;
 
-        &:hover
-            border-image url(@/assets/images/ui/frame-hover.svg) 10 / 20px
-            background rgba(0, 0, 0, 0.8)
+    &:hover {
+      border-image: url(@/assets/images/ui/frame-hover.svg) 10 / 20px;
+      background: rgba(0, 0, 0, 0.8);
+    }
+  }
 
-    &-skip
-        border 0
-        background none
-        color var(--color-contrast)
-        opacity 0.6
-        font-size 0.9em
-        cursor pointer
+  &-skip {
+    border: 0;
+    background: none;
+    color: var(--color-contrast);
+    opacity: 0.6;
+    font-size: 0.9em;
+    cursor: pointer;
+  }
+}
 </style>

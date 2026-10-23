@@ -124,93 +124,106 @@ function centerMapOnUser() {
   </div>
 </template>
 
-<style lang="stylus" scoped>
-.App
-    width 100%
-    height 100%
-    position relative
-    background url(@/assets/images/map/background.jpg) repeat
+<style lang="scss" scoped>
+.App {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  background: url(@/assets/images/map/background.jpg) repeat;
 
-    &-map
-        width 100%
-        height 100%
+  &-map {
+    width: 100%;
+    height: 100%;
 
-        // elements created by MapLibre carry no scope id, hence :deep
-        :deep(&-position)
-            width 50px
-            height 50px
+    // elements created by MapLibre carry no scope id, hence :deep
+    :deep(.App-map-position) {
+      width: 50px;
+      height: 50px;
+    }
 
-        :deep(&-position-arrow)
-            width 100%
-            height 100%
-            background url(@/assets/images/map/user.svg) center no-repeat
-            background-size contain
+    :deep(.App-map-position-arrow) {
+      width: 100%;
+      height: 100%;
+      background: url(@/assets/images/map/user.svg) center no-repeat;
+      background-size: contain;
+    }
 
-        :deep(&-poi)
-            width 32px
-            height 32px
+    :deep(.App-map-poi) {
+      width: 32px;
+      height: 32px;
+    }
 
-        &-button
-            width 80px
-            height 80px
-            position absolute
-            bottom 60px
-            right 20px
-            z-index 100
-            display block
-            cursor pointer
+    &-button {
+      width: 80px;
+      height: 80px;
+      position: absolute;
+      bottom: 60px;
+      right: 20px;
+      z-index: 100;
+      display: block;
+      cursor: pointer;
 
-            &:hover
+      &:hover {
+        &:after {
+          background: rgba(0, 0, 0, 0.8);
+        }
 
-                &:after
-                    background rgba(0, 0, 0, 0.8)
+        &:before {
+          border-image: url(@/assets/images/ui/frame-hover.svg) 10 / 20px;
+        }
+      }
 
-                &:before
-                    border-image url(@/assets/images/ui/frame-hover.svg) 10 / 20px
+      &:after {
+        content: ' ';
+        display: block;
+        position: absolute;
+        z-index: 1;
+        top: 10px;
+        left: 10px;
+        width: calc(100% - 20px);
+        aspect-ratio: 1/1;
+        background: rgba(0, 0, 0, 0.4);
+      }
 
-            &:after
-                content " "
-                display block
-                position absolute
-                z-index 1
-                top 10px
-                left 10px
-                width calc(100% - 20px)
-                aspect-ratio 1/1
-                background rgba(0, 0, 0, 0.4)
+      &:before {
+        content: ' ';
+        display: block;
+        width: 100%;
+        aspect-ratio: 1/1;
+        border-image: url(@/assets/images/ui/frame.svg) 10 / 20px;
+        background: transparent center no-repeat;
+        background-size: 45%;
+        pointer-events: none;
+        position: relative;
+        z-index: 10;
+      }
 
+      &--recenter {
+        &:before {
+          background-image: url(@/assets/images/ui/icons/recenter.svg);
+          background-size: 55%;
+        }
+      }
+    }
 
-            &:before
-                content " "
-                display block
-                width 100%
-                aspect-ratio 1/1
-                border-image url(@/assets/images/ui/frame.svg) 10 / 20px
-                background transparent center no-repeat
-                background-size 45%
-                pointer-events none
-                position relative
-                z-index 10
-
-            &--recenter
-                &:before
-                    background-image url(@/assets/images/ui/icons/recenter.svg)
-                    background-size 55%
-
-
-        /*
+    /*
           the following implementation is buggy...
           TODO: style widgets internal, controlled by mode attr? or by context?
         */
-        &-widgets
-            position absolute
-            top 100px
-            right 20px
-            gap 0
+    &-widgets {
+      position: absolute;
+      top: 100px;
+      right: 20px;
+      gap: 0;
 
-            .WeatherWidget
-                justify-content flex-end
+      .WeatherWidget {
+        justify-content: flex-end;
+      }
 
-            .ClockWidget
-                font-size 1.5em
+      .ClockWidget {
+        font-size: 1.5em;
+      }
+    }
+  }
+}
 </style>

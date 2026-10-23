@@ -1,0 +1,69 @@
+/* global transitions */
+
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 1s 1s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+
+/* global animations */
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* lightbox */
+
+.pswp {
+  &__bg {
+    background: var(--color-base) url(@/assets/images/background/background.png) !important;
+    backdrop-filter: blur(8px);
+  }
+
+  &__top-bar {
+    top: auto !important;
+    bottom: 80px;
+    justify-content: center !important;
+  }
+
+  &__preloader {
+    position: absolute;
+    top: 0;
+    left: calc(50% - 25px);
+  }
+
+  &__caption {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 130px;
+    padding: 3em 1.5em 1em;
+    text-align: center;
+    color: var(--color-primary);
+    background: linear-gradient(transparent, rgba(1, 7, 16, 0.85));
+    pointer-events: none;
+
+    h2 {
+      font-family: 'HyliaSerif';
+      font-size: 1.5em;
+      letter-spacing: 1px;
+      text-shadow: 0 0 8px var(--color-primary);
+    }
+
+    p {
+      margin-top: 0.4em;
+      font-size: 0.85em;
+      font-style: italic;
+      color: var(--color-contrast);
+    }
+  }
+}

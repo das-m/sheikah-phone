@@ -8,11 +8,12 @@ import InfoText from '@/components/InfoText.vue'
   </div>
 </template>
 
-<style lang="stylus" scoped>
-.App
-    width 100%
-    height 100%
-    display flex
-    align-items center
-    justify-content center
+<style lang="scss" scoped>
+.App {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
 </style>

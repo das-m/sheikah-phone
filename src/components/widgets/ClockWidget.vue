@@ -55,24 +55,28 @@ const seconds = computed(() => {
   </div>
 </template>
 
-<style lang="stylus" scoped>
-.ClockWidget
-    position relative
-    font-size 2.5em
-    color var(--color-primary)
-    text-shadow 0 0 10px var(--color-primary)
+<style lang="scss" scoped>
+.ClockWidget {
+  position: relative;
+  font-size: 2.5em;
+  color: var(--color-primary);
+  text-shadow: 0 0 10px var(--color-primary);
 
-    &-time
+  &-time {
+    &-display {
+      display: flex;
+      line-height: 1.2;
 
-        &-display
-            display flex
-            line-height 1.2
+      div {
+        font-weight: 500;
+      }
+    }
 
-            div
-                font-weight 500
-
-        &-label
-            background url(@/assets/images/ui/labels/sheikah-clock.svg) center no-repeat
-            background-size contain
-            height 0.3em
+    &-label {
+      background: url(@/assets/images/ui/labels/sheikah-clock.svg) center no-repeat;
+      background-size: contain;
+      height: 0.3em;
+    }
+  }
+}
 </style>

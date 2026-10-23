@@ -20,4 +20,9 @@ describe('isInsideZone', () => {
     expect(isInsideZone(at(60), zone, false, 25)).toBe(true)
     expect(isInsideZone(at(60), zone, false, 5)).toBe(false)
   })
+
+  it('caps the credit, so a coarse fix does not unlock the zone from afar', () => {
+    expect(isInsideZone(at(500), zone, false, 2000)).toBe(false)
+    expect(isInsideZone(at(55), zone, false, 2000)).toBe(true)
+  })
 })
