@@ -8,8 +8,6 @@ const RESET_VIBRATION = [120]
 
 // Module-level state: the mode is shared by the whole app and not persisted (a reload resets it).
 const mode = ref<AppMode>('sheikah')
-/** Manual fallback for unreliable GPS: pretends the player is inside the zone. */
-const forceInZone = ref(false)
 
 watch(
   mode,
@@ -41,5 +39,5 @@ function reset() {
 
 /** Sheikah (blue) or Yiga (red) mode, switched by flip + shake in the zone (see `useYigaTrigger`). */
 export function useYigaMode() {
-  return { mode, forceInZone, enter, reset }
+  return { mode, enter, reset }
 }

@@ -7,17 +7,18 @@ import { apps } from '@/game/apps'
 
 const version = APP_VERSION
 
-const { mode, forceInZone } = useYigaMode()
+const { mode, enter, reset } = useYigaMode()
 const visibleApps = computed(() => apps.filter((app) => app.mode === mode.value))
 
-// Manual fallback for unreliable GPS: tap the version 7 times to pretend to be inside the Yiga zone.
+// Manual fallback for unreliable GPS (and for testing in the browser): tap the version 7 times to toggle Yiga mode.
 const DEBUG_TAPS = 7
 const versionTaps = ref(0)
 function onVersionTap() {
   versionTaps.value += 1
   if (versionTaps.value < DEBUG_TAPS) return
   versionTaps.value = 0
-  forceInZone.value = !forceInZone.value
+  if (mode.value === 'yiga') reset()
+  else enter()
 }
 </script>
 

@@ -10,7 +10,7 @@ import { isInsideZone } from '@/lib/zone'
  * Enter: inside the zone, phone flipped, shake. Reset: shake, anywhere.
  */
 export function useYigaTrigger() {
-  const { mode, forceInZone, enter, reset } = useYigaMode()
+  const { mode, enter, reset } = useYigaMode()
   const { position, accuracy } = useGeolocation()
 
   const isInZone = ref(false)
@@ -19,13 +19,12 @@ export function useYigaTrigger() {
     isInZone.value = isInsideZone(position.value, yigaZone, isInZone.value, accuracy.value ?? 0)
   })
 
-  const inZone = computed(() => isInZone.value || forceInZone.value)
-  const motionActive = computed(() => inZone.value || mode.value === 'yiga')
+  const motionActive = computed(() => isInZone.value || mode.value === 'yiga')
 
   const { flipped, intensity } = useMotion(motionActive, (wasFlipped) => {
     if (mode.value === 'yiga') reset()
-    else if (inZone.value && wasFlipped) enter()
+    else if (isInZone.value && wasFlipped) enter()
   })
 
-  return { inZone, flipped, intensity }
+  return { isInZone, flipped, intensity }
 }

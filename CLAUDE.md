@@ -23,7 +23,7 @@ Target: Android Chrome, installed as a PWA, used outdoors and often offline. iOS
 - Sounds are `.ogg`.
 
 ## Gotchas
-- Yiga mode (red UI, own app set): flip phone head-down + shake inside `yigaZone` (`src/game/zones.ts`, placeholder position), shake again to reset. Not persisted. Fallback for bad GPS: tap the version on the home screen 7 times to force "in zone". Colors switch via `:root[data-mode='yiga']` in `variables.styl`; baked-in blue images are overridden in `src/assets/styl/yiga.styl` (`*-red` files are script-made placeholders). New apps go in `src/game/apps.ts` with a mode.
+- Yiga mode (red UI, own app set): flip phone head-down + shake inside `yigaZone` (`src/game/zones.ts`, placeholder position), shake again to reset. Not persisted. Fallback for bad GPS, also the way to test in a browser: tap the version on the home screen 7 times to toggle the mode directly (no zone, flip or shake). Colors switch via `:root[data-mode='yiga']` in `variables.styl`; baked-in blue images are overridden in `src/assets/styl/yiga.styl` (`*-red` files are script-made placeholders). New apps go in `src/game/apps.ts` with a mode.
 - Vibration and sounds need a prior tap, like all audio.
 - Web NFC (Reader) and the beeper both need a tap first: the browser asks permission and blocks audio until then.
 - `InstallGate` only shows in production builds in a browser tab. Chrome fires `beforeinstallprompt` once, so `useInstall` captures it at module load.
