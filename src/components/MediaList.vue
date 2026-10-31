@@ -18,7 +18,10 @@ onMounted(() => {
       arrowPrev: false,
       arrowNext: false,
       zoom: true,
+      // The photo covers the whole screen (the frame is drawn over its edges), panning shows the rest of it;
+      // a double tap zooms to 100%.
       initialZoomLevel: 'fill',
+      bgOpacity: 1,
       secondaryZoomLevel: 1,
       maxZoomLevel: 2,
       close: true,
@@ -87,6 +90,15 @@ onUnmounted(() => {
   flex-direction: column;
   align-items: center;
   gap: 1em;
+
+  // Two columns on a wide screen. Cells never grow past the item width and shrink with the screen (minmax 0),
+  // so a narrow landscape phone still fits both.
+  @media (orientation: landscape) {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 388px));
+    justify-content: center;
+    align-items: start;
+  }
 
   &-item {
     display: block;

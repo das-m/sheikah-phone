@@ -162,13 +162,13 @@ function onVersionTap() {
 }
 
 .fade-leave-active {
-  transition: opacity 1s ease;
+  transition: opacity 0.3s ease;
 }
 
 .fade-enter-active {
   transition:
-    opacity 1s 1s ease,
-    transform 1.2s 1s ease-out;
+    opacity 1s var(--screen-delay) ease,
+    transform 1.2s var(--screen-delay) ease-out;
 }
 
 .fade-enter-from,

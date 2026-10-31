@@ -2,9 +2,16 @@
 
 /* global transitions */
 
-.fade-enter-active,
+/*
+  Screen transitions (apps, home). A leaving screen is gone (0.3 s) as the loader logo arrives. An entering
+  one waits `--screen-delay` (variables.scss): the loader plays alone, then the screen comes up.
+*/
+.fade-enter-active {
+  transition: opacity 1s var(--screen-delay) ease;
+}
+
 .fade-leave-active {
-  transition: opacity 1s 1s ease;
+  transition: opacity 0.3s ease;
 }
 
 .fade-enter-from,
@@ -25,16 +32,70 @@
 
 /* lightbox */
 
-.pswp {
+// `html` raises the specificity: PhotoSwipe's stylesheet is loaded later (with the gallery) and would otherwise win.
+html .pswp {
   &__bg {
     @include surface.surface($important: true);
     backdrop-filter: blur(8px);
   }
 
+  // Zoom and close sit where the map's recenter button does, as the same framed tiles. The icons are
+  // PhotoSwipe's own, in the accent color and without its outline.
   &__top-bar {
     top: auto !important;
-    bottom: 80px;
-    justify-content: center !important;
+    left: auto;
+    width: auto;
+    height: auto;
+    bottom: calc(var(--frame-bottom) + 8px);
+    right: calc(var(--frame-corner-br) + 8px);
+    gap: 8px;
+  }
+
+  &__button {
+    width: 72px;
+    height: 72px;
+    margin: 0 !important;
+    opacity: 1;
+    overflow: visible;
+
+    &:before {
+      content: ' ';
+      position: absolute;
+      z-index: 4;
+      inset: 0;
+      border-image: url(@/assets/images/ui/frame.svg) 10 / 20px;
+      pointer-events: none;
+    }
+
+    &:after {
+      content: ' ';
+      position: absolute;
+      z-index: 1;
+      inset: 10px;
+      background: rgba(0, 0, 0, 0.4);
+    }
+
+    &:hover:before,
+    &:focus-visible:before {
+      border-image: url(@/assets/images/ui/frame-hover.svg) 10 / 20px;
+    }
+
+    &:hover:after,
+    &:focus-visible:after {
+      background: rgba(0, 0, 0, 0.8);
+    }
+  }
+
+  &__icn {
+    z-index: 2;
+    top: 20px;
+    left: 20px;
+    fill: var(--color-primary);
+    color: transparent;
+  }
+
+  &__icn-shadow {
+    display: none;
   }
 
   &__preloader {
@@ -43,16 +104,30 @@
     left: calc(50% - 25px);
   }
 
+  // At the top, beside the top corners of the frame; on a narrow portrait screen there is no room beside
+  // them, so it goes below them.
+  // The gradient spans the full width and fades downward, so it has no visible edges; the padding keeps the
+  // text beside the corners.
   &__caption {
     position: absolute;
+    top: var(--frame-top);
     left: 0;
     right: 0;
-    bottom: 130px;
-    padding: 3em 1.5em 1em;
+    padding: 1em calc(var(--frame-corner-tr) + 1.5em) 3.5em calc(var(--frame-corner-tl) + 1.5em);
     text-align: center;
     color: var(--color-primary);
-    background: linear-gradient(transparent, rgba(1, 7, 16, 0.85));
+    background: linear-gradient(
+      rgba(1, 7, 16, 0.85),
+      rgba(1, 7, 16, 0.7) 45%,
+      rgba(1, 7, 16, 0.3) 75%,
+      transparent
+    );
     pointer-events: none;
+
+    // On a narrow portrait screen there is no room beside the top corners: the text goes below them.
+    @media (orientation: portrait) {
+      padding: calc(var(--frame-corner-top-h) - var(--frame-top) + 1em) 1.5em 3.5em;
+    }
 
     h2 {
       font-family: 'HyliaSerif';
@@ -66,6 +141,7 @@
       font-size: 0.85em;
       font-style: italic;
       color: var(--color-contrast);
+      text-shadow: 0 1px 4px rgba(0, 0, 0, 0.8);
     }
   }
 }

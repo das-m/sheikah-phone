@@ -17,8 +17,14 @@ const isBooting = ref(true)
 const isBooted = ref(false)
 
 // loader between apps
-const LOADER_MS = 1200
+// The logo arrives in 0.75 s, the pattern flickers up between 0.9 s and 1.8 s: this keeps the finished logo,
+// with its glow, on screen for a moment before it leaves.
+const LOADER_MS = 2200
+// The switch between the modes is longer: the "hack" of the loader (SheikahLoader) runs for about 3.6 s. The
+// screen after it waits for this and the loader's exit (`--screen-delay` while `Phone-main--hacking`, below).
+const HACK_MS = 3600
 const showLoader = ref(false)
+const hack = ref<'' | 'to-yiga' | 'to-sheikah'>('')
 const route = useRoute()
 
 watch(
@@ -29,6 +35,7 @@ watch(
     // A mode switch redirects away from the other mode's app. The switch already plays its sound and the loader.
     if (!isRouteAvailable(oldPath, mode.value)) return
 
+    hack.value = ''
     show()
     if (route.name == 'home') playClose(mode.value)
     else playOpen(mode.value)
@@ -37,17 +44,21 @@ watch(
 
 let loaderTimer: ReturnType<typeof setTimeout> | undefined
 
-function show() {
+function show(ms = LOADER_MS) {
   showLoader.value = true
   clearTimeout(loaderTimer)
   loaderTimer = setTimeout(() => {
     showLoader.value = false
-  }, LOADER_MS)
+  }, ms)
 }
 
-// Yiga mode: flip + shake in the zone; the loader plays on every mode switch
+// Yiga mode: flip + shake in the zone; every mode switch plays the longer "hack" transition
 useYigaTrigger()
-watch(mode, () => isBooted.value && show())
+watch(mode, (value) => {
+  if (!isBooted.value) return
+  hack.value = value === 'yiga' ? 'to-yiga' : 'to-sheikah'
+  show(HACK_MS)
+})
 </script>
 
 <template>
@@ -56,9 +67,13 @@ watch(mode, () => isBooted.value && show())
 
     <InstallGate />
 
-    <main class="Phone-main" id="main">
-      <SheikahLoader :show="showLoader" />
-      <RouterView v-if="isBooted" />
+    <main
+      :class="['Phone-main', { 'Phone-main--booting': isBooting, 'Phone-main--hacking': hack }]"
+      id="main"
+    >
+      <SheikahLoader :show="showLoader" :hack="hack" />
+      <!-- keyed by the mode: the screen is built again after a switch, so it comes up after the transition -->
+      <RouterView v-if="isBooted" :key="mode" />
       <BootScreen v-if="isBooting" @ready="isBooted = true" @done="isBooting = false" />
     </main>
   </div>
@@ -77,6 +92,16 @@ watch(mode, () => isBooted.value && show())
     right: 0;
     bottom: 0;
     left: 0;
+
+    // The first screen is mounted while the boot screen dissolves (1.2 s), so it has less to wait for.
+    &--booting {
+      --screen-delay: 1s;
+    }
+
+    // After a mode switch: the hack (3.6 s) and the exit of the loader (0.65 s) play first.
+    &--hacking {
+      --screen-delay: 4.25s;
+    }
   }
 }
 </style>

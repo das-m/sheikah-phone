@@ -69,6 +69,11 @@ $bottom-height: 118;
   @return u(map.get(map.get($corners, $name), w));
 }
 
+// Height of a corner, for content that has to stay below it.
+@function corner-h($name) {
+  @return u(map.get(map.get($corners, $name), h));
+}
+
 @function image($set, $name) {
   @return url('@/assets/images/frame/#{$set}/#{$name}.#{$ext}');
 }

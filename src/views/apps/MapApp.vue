@@ -129,13 +129,13 @@ function centerMapOnUser() {
 </template>
 
 <style lang="scss" scoped>
-// The loader (App.vue) covers the screen for about 1.2 s and then dissolves over 0.65 s, so the reveal starts
-// under it: the grid comes up as the loader fades, the overlay sweeps over it, the map fades in last.
-$grid-delay: 1s;
-$overlay-delay: 1.6s;
-$map-delay: 2.2s;
+// The reveal starts once the loader is gone (--screen-delay): the grid comes up, the overlay sweeps over it,
+// the map fades in last.
+$grid-delay: var(--screen-delay);
+$overlay-delay: calc(var(--screen-delay) + 0.5s);
+$map-delay: calc(var(--screen-delay) + 1s);
 // Buttons and widgets settle in like the home screen does (fade 1 s, zoom-settle 1.2 s), as the map finishes.
-$ui-delay: 2.6s;
+$ui-delay: calc(var(--screen-delay) + 1.4s);
 
 .App {
   width: 100%;

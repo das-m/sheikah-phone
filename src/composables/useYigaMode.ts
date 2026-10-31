@@ -6,17 +6,28 @@ const THEME_COLORS: Record<AppMode, string> = { sheikah: '#3CD3FC', yiga: '#F150
 const ACTIVATE_VIBRATION = [200, 80, 200, 80, 400]
 const RESET_VIBRATION = [120]
 
+// The colors of the UI switch part-way into the mode switch, as the logo of the transition turns (see
+// `SheikahLoader`, the "hack" part): not at its start, when the screen is still blue (or red).
+export const MODE_APPLY_DELAY_MS = 1600
+
 // Module-level state: the mode is shared by the whole app and not persisted (a reload resets it).
 const mode = ref<AppMode>('sheikah')
 
-watch(
-  mode,
-  (value) => {
-    document.documentElement.dataset.mode = value
-    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', THEME_COLORS[value])
-  },
-  { immediate: true }
-)
+function applyToDocument(value: AppMode) {
+  document.documentElement.dataset.mode = value
+  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', THEME_COLORS[value])
+}
+
+let applyTimer: ReturnType<typeof setTimeout> | undefined
+
+applyToDocument(mode.value)
+
+// `mode` itself changes at once (apps, sounds); only its look is delayed. A switch back in the meantime
+// replaces the pending one.
+watch(mode, (value) => {
+  clearTimeout(applyTimer)
+  applyTimer = setTimeout(() => applyToDocument(value), MODE_APPLY_DELAY_MS)
+})
 
 function vibrate(pattern: number[]) {
   // Needs a prior tap and is missing on some browsers; neither is an error for us.

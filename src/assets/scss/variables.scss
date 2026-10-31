@@ -5,6 +5,10 @@
   Width-bound on portrait phones, height-bound on landscape and desktop, clamped at both ends.
 */
 :root {
+  // How long a new screen waits before it fades in, after a route change: the loader plays alone first and is
+  // gone before the screen starts (App.vue: LOADER_MS = 2.2 s, plus its 0.65 s exit). Right after the boot it is shorter (see
+  // `Phone-main--booting` in App.vue).
+  --screen-delay: 2.85s;
   --u: clamp(0.35px, 100vmin / 860, 0.7px);
   --frame-top: #{frame.u(frame.$top-height)};
   --frame-bottom: #{frame.u(frame.$bottom-height)};
@@ -12,6 +16,8 @@
   --frame-corner-tl: #{frame.corner-w('corner-tl')};
   --frame-corner-tr: #{frame.corner-w('corner-tr')};
   --frame-corner-br: #{frame.corner-w('corner-br')};
+  // the lower end of the top corners (the right one is the taller)
+  --frame-corner-top-h: #{frame.corner-h('corner-tr')};
 }
 
 :root {

@@ -16,8 +16,8 @@ $yiga-tint: hue-rotate(168deg);
     filter: $yiga-tint;
   }
 
-  // upside down; `rotate` is separate from `transform`, which the loader transition animates
-  .SheikahLoader-logo-main {
+  // the whole logo upside down; `rotate` is separate from `transform`, which the loader transition animates
+  .SheikahLoader-logo {
     rotate: 180deg;
   }
 
