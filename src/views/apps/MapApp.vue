@@ -51,7 +51,13 @@ function createUserMarker(): HTMLElement {
     userArrowEl.appendChild(child)
   }
   el.appendChild(userArrowEl)
+  // The heading may have arrived before the first GPS fix, which is when this marker is created.
+  applyHeading(heading.value)
   return el
+}
+
+function applyHeading(value: number | null) {
+  if (userArrowEl) userArrowEl.style.transform = `rotate(${value ?? 0}deg)`
 }
 
 onMounted(() => {
@@ -99,9 +105,7 @@ const stopWatchingFirstFix = watch(userPosition, (position) => {
   stopWatchingFirstFix()
 })
 
-watch(heading, (value) => {
-  if (userArrowEl) userArrowEl.style.transform = `rotate(${value ?? 0}deg)`
-})
+watch(heading, applyHeading)
 
 function centerMapOnUser() {
   if (userPosition.value) map?.easeTo({ center: toLngLat(userPosition.value), zoom: 17 })

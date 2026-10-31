@@ -1,4 +1,5 @@
 import { computed, onMounted, onUnmounted, reactive, ref } from 'vue'
+import { useRouter } from 'vue-router'
 
 import {
   BOOT_TIMING,
@@ -10,7 +11,6 @@ import {
   type PreloadGroup
 } from '@/lib/boot'
 import { createPreloadTasks, runPreload } from '@/lib/preload'
-import router from '@/router'
 
 /**
  * Drives the boot screen: a clock for the show, and the real preloading the bar reports on.
@@ -21,7 +21,7 @@ export function useBoot() {
     ? BOOT_TIMING_REDUCED
     : BOOT_TIMING
 
-  const tasks = createPreloadTasks(router)
+  const tasks = createPreloadTasks(useRouter())
   const groups = reactive<Record<PreloadGroup, GroupProgress>>({
     fonts: { done: 0, total: 0 },
     images: { done: 0, total: 0 },

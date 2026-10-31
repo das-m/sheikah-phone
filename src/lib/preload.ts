@@ -26,8 +26,9 @@ const imageUrls = Object.values(
   )
 ).filter((url) => !url.startsWith('data:'))
 
+// Like the images, without the Yiga variants (`*-reversed`): `uiSounds` loads those on first use.
 const audioUrls = Object.values(
-  import.meta.glob<string>('/src/assets/audio/*.ogg', {
+  import.meta.glob<string>(['/src/assets/audio/*.ogg', '!/src/assets/audio/*-reversed.ogg'], {
     eager: true,
     query: '?url',
     import: 'default'

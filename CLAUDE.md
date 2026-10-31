@@ -10,7 +10,7 @@ Target: Android Chrome, installed as a PWA, used outdoors and often offline. iOS
 
 ## Layout
 - `src/views/apps/*App.vue`: the three apps (map, camera, media). Thin: UI only.
-- `src/composables/`: browser-API wrappers (`useGeolocation`, `useHeading`, `useCamera`, `useInstall`, `useMotion`). `useYigaMode` holds the app mode, `useYigaTrigger` (mounted in `App.vue`) wires zone + flip + shake to it.
+- `src/composables/`: browser-API wrappers (`useGeolocation`, `useHeading`, `useCamera`, `useInstall`, `useMotion`, `useBoot`). `useYigaMode` holds the app mode, `useYigaTrigger` (mounted in `App.vue`) wires zone + flip + shake to it.
 - `src/lib/`: pure functions with unit tests (`geo.ts`, `zone.ts`, `gesture.ts`). Put new maths here, test it.
 - `src/game/`: game content as data (POIs, Yiga zone, app registry per mode). Riddles, keys and targets go here, never hardcoded in components.
 - `src/map/`: MapLibre style (BotW look) on OpenFreeMap vector tiles. Public service without guarantee: self-host as PMTiles before the real hunt.
