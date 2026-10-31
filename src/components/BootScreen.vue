@@ -84,6 +84,11 @@ onUnmounted(() => clearTimeout(leaveTimer))
     border: 1px solid color-mix(in srgb, var(--color-primary) 55%, transparent);
     animation: fade-in 0.6s 1s ease-out both;
 
+    // In landscape the logo fills the height, so there is no room for the bar below it.
+    @media (orientation: landscape) {
+      display: none;
+    }
+
     &-fill {
       height: 100%;
       width: calc(var(--progress) * 100%);
