@@ -2,7 +2,7 @@
 
 A reimagined Sheikah Slate from *Breath of the Wild*, built as a PWA for a Zelda-themed scavenger hunt in Ludwigsburg. Players receive it through an NFC tag and install it on their phone (Android Chrome).
 
-Apps: Map, Sensor (beeps faster as you near the target), Camera, Media, Reader (Web NFC, shows what a tag contains).
+Apps: Map, Camera, Media.
 
 ## Setup
 
@@ -20,4 +20,4 @@ npm run dev
 | `npm run check` | Type-check, lint and unit tests |
 | `npm run format` | Format `src/` with Prettier |
 
-See `CLAUDE.md` for architecture and conventions.
+See `CLAUDE.md` for architecture and conventions, `SECRETS.md` for the hidden mechanics.

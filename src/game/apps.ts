@@ -9,10 +9,8 @@ export interface AppEntry {
 /** Apps on the home screen. Each app belongs to exactly one mode. */
 export const apps: AppEntry[] = [
   { id: 'map', route: '/map', mode: 'sheikah' },
-  { id: 'sensor', route: '/sensor', mode: 'sheikah' },
   { id: 'camera', route: '/camera', mode: 'sheikah' },
   { id: 'media', route: '/media', mode: 'sheikah' },
-  { id: 'reader', route: '/reader', mode: 'sheikah' },
   // Placeholder until the real Yiga apps exist.
   { id: 'yiga', route: '/yiga', mode: 'yiga' }
 ]

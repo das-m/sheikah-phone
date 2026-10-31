@@ -28,16 +28,6 @@ export function distanceMeters(from: LatLng, to: LatLng): number {
   return 2 * EARTH_RADIUS_M * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
 }
 
-/** Initial bearing from `from` to `to`: degrees clockwise from true north, in [0, 360). */
-export function bearingDegrees(from: LatLng, to: LatLng): number {
-  const phi1 = toRad(from.lat)
-  const phi2 = toRad(to.lat)
-  const dLambda = toRad(to.lng - from.lng)
-  const y = Math.sin(dLambda) * Math.cos(phi2)
-  const x = Math.cos(phi1) * Math.sin(phi2) - Math.sin(phi1) * Math.cos(phi2) * Math.cos(dLambda)
-  return normalizeDegrees(toDeg(Math.atan2(y, x)))
-}
-
 /**
  * Compass heading (degrees clockwise from north) from a DeviceOrientationEvent's alpha/beta/gamma.
  *
@@ -57,25 +47,4 @@ export function compassHeading(alpha: number, beta: number, gamma: number): numb
   const rB = -Math.sin(a) * Math.sin(g) + Math.cos(a) * Math.sin(b) * Math.cos(g)
 
   return normalizeDegrees(toDeg(Math.atan2(rA, rB)))
-}
-
-/** True if `heading` points at `bearing` within ±`toleranceDeg`. */
-export function isFacing(heading: number, bearing: number, toleranceDeg: number): boolean {
-  return Math.abs(angleDifference(heading, bearing)) <= toleranceDeg
-}
-
-export interface BeepRange {
-  /** At or below this distance (m) the beep rate is at its fastest. */
-  nearMeters: number
-  /** At or above this distance (m) the beep rate is at its slowest. */
-  farMeters: number
-  fastIntervalMs: number
-  slowIntervalMs: number
-}
-
-/** Delay between two beeps: linear between the fast and slow interval over the distance range. */
-export function beepIntervalMs(distance: number, range: BeepRange): number {
-  const { nearMeters, farMeters, fastIntervalMs, slowIntervalMs } = range
-  const t = Math.min(1, Math.max(0, (distance - nearMeters) / (farMeters - nearMeters)))
-  return fastIntervalMs + t * (slowIntervalMs - fastIntervalMs)
 }

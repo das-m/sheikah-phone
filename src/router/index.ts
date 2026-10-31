@@ -21,11 +21,6 @@ const router = createRouter({
       component: () => import('../views/apps/MapApp.vue')
     },
     {
-      path: '/sensor',
-      name: 'sensor',
-      component: () => import('../views/apps/SensorApp.vue')
-    },
-    {
       path: '/camera',
       name: 'camera',
       component: () => import('../views/apps/CameraApp.vue')
@@ -34,11 +29,6 @@ const router = createRouter({
       path: '/media',
       name: 'media',
       component: () => import('../views/apps/MediaApp.vue')
-    },
-    {
-      path: '/reader',
-      name: 'reader',
-      component: () => import('../views/apps/ReaderApp.vue')
     },
     {
       path: '/yiga',
