@@ -41,4 +41,4 @@ Target: Android Chrome, installed as a PWA, used outdoors and often offline. iOS
 - Do not edit `dist/`. `dev-dist/` and `*:Zone.Identifier` files are ignored.
 - Heading uses `deviceorientationabsolute` (Android only). Test location, heading and camera on a real phone, not only on desktop.
 - `src/components/experiments/*.vue_` are old, uncompiled experiments. Reference only.
-- Not usable yet, parked on branches: the Web NFC Reader app (`feature/nfc-reader`) and the Sensor app with beeper and bearing maths (`feature/sensor-compass`).
+- Not usable yet, parked on branches: the Web NFC Reader app (`feature/nfc-reader`, same commit as `main`), the Sensor app with beeper and bearing maths (`feature/sensor-compass`) and the Sheikah Lens, QR scanning in the camera app (`feature/camera-scanner`).
