@@ -39,3 +39,6 @@ dev-dist
 
 # raw audio drafts
 src/assets/audio/temp/
+
+# Git Bash temp files
+.msys*
