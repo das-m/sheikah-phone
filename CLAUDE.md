@@ -9,8 +9,8 @@ Target: Android Chrome, installed as a PWA, used outdoors and often offline. iOS
 - `npm run format`: Prettier
 
 ## Layout
-- `src/views/apps/*App.vue`: the three apps (map, camera, media). Thin: UI only.
-- `src/composables/`: browser-API wrappers (`useGeolocation`, `useHeading`, `useCamera`, `useInstall`, `useMotion`, `useBoot`). `useYigaMode` holds the app mode, `useYigaTrigger` (mounted in `App.vue`) wires zone + flip + shake to it.
+- `src/views/apps/*App.vue`: the four apps (map, camera, media, reader). Thin: UI only.
+- `src/composables/`: browser-API wrappers (`useGeolocation`, `useHeading`, `useCamera`, `useNfc`, `useInstall`, `useMotion`, `useBoot`). `useYigaMode` holds the app mode, `useYigaTrigger` (mounted in `App.vue`) wires zone + flip + shake to it.
 - `src/lib/`: pure functions with unit tests (`geo.ts`, `zone.ts`, `gesture.ts`). Put new maths here, test it.
 - `src/game/`: game content as data (POIs, Yiga zone, app registry per mode). Riddles, keys and targets go here, never hardcoded in components.
 - `src/map/`: MapLibre style (BotW look) on OpenFreeMap vector tiles. Public service without guarantee: self-host as PMTiles before the real hunt.
@@ -27,18 +27,18 @@ Target: Android Chrome, installed as a PWA, used outdoors and often offline. iOS
 - Full-screen surfaces (page, install gate, lightbox) get the swirl tile through `@include surface.surface` (`_surface.scss`), which also handles the Yiga tile.
 - Styles: SCSS, scoped, BEM-like `Block-element--modifier`. Colors via CSS vars from `src/assets/scss/variables.scss`.
 - Every listener, timer, stream and AudioContext must be released in `onUnmounted` (the composables do this).
-- Every GPS trigger needs a manual fallback, because GPS is unreliable outdoors.
+- Every GPS or NFC trigger needs a manual fallback, because GPS is unreliable outdoors.
 - Audio needs a user gesture before it can play. Use `playSound()` for effects (swallows the rejection).
 - Sounds are `.ogg`.
 
 ## Gotchas
 - Yiga mode (red UI, own app set): flip phone head-down + shake inside `yigaZone` (`src/game/zones.ts`, placeholder position), shake again to reset. Not persisted. Fallback for bad GPS, also the way to test in a browser: tap the version on the home screen 7 times to toggle the mode directly (no zone, flip or shake). Colors switch via `:root[data-mode='yiga']` in `variables.scss`; baked-in blue images are overridden in `src/assets/scss/yiga.scss` (`*-red` files are script-made placeholders). New apps go in `src/game/apps.ts` with a mode.
-- Vibration and sounds need a prior tap, like all audio.
+- Vibration and sounds need a prior tap, like all audio. Web NFC (Reader) needs one too: the browser asks for permission.
 - `InstallGate` only shows in production builds in a browser tab. Chrome fires `beforeinstallprompt` once, so `useInstall` captures it at module load.
-- Visual checks: build, `npx vite preview`, screenshot with headless Chromium.
+- Visual checks: build, `npx vite preview`, screenshot with headless Chromium. Headless has no Web NFC, so the Reader shows its unsupported state there.
 - The map needs no API key. Never commit keys.
 - MapLibre markers own their element's `transform`: rotate a child element, never the marker element (the user marker rotates one `-heading` child holding the view cone `map/direction.png`, whose tip and lean are constants in `MapApp.vue`, and the arrow). Its worker is wired via `setWorkerUrl` in `MapApp.vue` (without it the map is blank in dev and production).
 - Do not edit `dist/`. `dev-dist/` and `*:Zone.Identifier` files are ignored.
 - Heading uses `deviceorientationabsolute` (Android only). Test location, heading and camera on a real phone, not only on desktop.
-- `src/components/experiments/*.vue_` are old, uncompiled experiments. Reference only.
-- Not usable yet, parked on branches: the Web NFC Reader app (`feature/nfc-reader`), the Sensor app with beeper and bearing maths (`feature/sensor-compass`) and the Sheikah Lens, QR scanning in the camera app (`feature/camera-scanner`).
+- `src/components/experiments/*.vue_` are old, uncompiled experiments (including an older Web NFC reader). Reference only.
+- Not usable yet, parked on branches: the Sensor app with beeper and bearing maths (`feature/sensor-compass`) and the Sheikah Lens, QR scanning in the camera app (`feature/camera-scanner`).

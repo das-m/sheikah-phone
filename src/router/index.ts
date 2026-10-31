@@ -31,6 +31,11 @@ const router = createRouter({
       component: () => import('../views/apps/MediaApp.vue')
     },
     {
+      path: '/reader',
+      name: 'reader',
+      component: () => import('../views/apps/ReaderApp.vue')
+    },
+    {
       path: '/yiga',
       name: 'yiga',
       component: () => import('../views/apps/YigaApp.vue')

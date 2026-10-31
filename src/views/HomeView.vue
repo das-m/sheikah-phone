@@ -129,6 +129,12 @@ function onVersionTap() {
         }
       }
 
+      &--reader {
+        &:before {
+          background-image: url(@/assets/images/ui/icons/reader.svg);
+        }
+      }
+
       &--yiga {
         &:before {
           background-image: url(@/assets/images/ui/icons/scanner.svg);

@@ -11,6 +11,7 @@ export const apps: AppEntry[] = [
   { id: 'map', route: '/map', mode: 'sheikah' },
   { id: 'camera', route: '/camera', mode: 'sheikah' },
   { id: 'media', route: '/media', mode: 'sheikah' },
+  { id: 'reader', route: '/reader', mode: 'sheikah' },
   // Placeholder until the real Yiga apps exist.
   { id: 'yiga', route: '/yiga', mode: 'yiga' }
 ]
