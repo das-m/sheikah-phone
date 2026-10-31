@@ -106,14 +106,16 @@ html .pswp {
 
   // At the top, beside the top corners of the frame; on a narrow portrait screen there is no room beside
   // them, so it goes below them.
-  // The gradient spans the full width and fades downward, so it has no visible edges; the padding keeps the
-  // text beside the corners.
+  // The gradient spans the full width and fades downward, so it has no visible edges. It starts at the top of
+  // the screen, under the strip of the frame (which hides it), so no bright band shows between the two. The
+  // padding keeps the text below the strip and beside the corners.
   &__caption {
     position: absolute;
-    top: var(--frame-top);
+    top: 0;
     left: 0;
     right: 0;
-    padding: 1em calc(var(--frame-corner-tr) + 1.5em) 3.5em calc(var(--frame-corner-tl) + 1.5em);
+    padding: calc(var(--frame-top) + 1em) calc(var(--frame-corner-tr) + 1.5em) 3.5em
+      calc(var(--frame-corner-tl) + 1.5em);
     text-align: center;
     color: var(--color-primary);
     background: linear-gradient(
@@ -126,7 +128,7 @@ html .pswp {
 
     // On a narrow portrait screen there is no room beside the top corners: the text goes below them.
     @media (orientation: portrait) {
-      padding: calc(var(--frame-corner-top-h) - var(--frame-top) + 1em) 1.5em 3.5em;
+      padding: calc(var(--frame-corner-top-h) + 1em) 1.5em 3.5em;
     }
 
     h2 {
