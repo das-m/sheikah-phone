@@ -1,0 +1,16 @@
+// The Sheikah swirl tile on the base color, shared by every full-screen surface (page, install gate, lightbox).
+// The tile scales with the frame (--u), so the swirl keeps its size relative to the ornaments on every phone.
+@mixin surface($important: false) {
+  $flag: '';
+
+  @if $important {
+    $flag: ' !important';
+  }
+
+  background: var(--color-base) url('@/assets/images/background/background.png') repeat #{$flag};
+  background-size: calc(510 * var(--u)) #{$flag};
+
+  :root[data-mode='yiga'] & {
+    background-image: url('@/assets/images/background/background-red.png') #{$flag};
+  }
+}

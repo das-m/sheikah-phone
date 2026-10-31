@@ -1,3 +1,15 @@
+@use './frame';
+
+/*
+  Scale unit of the decorative art (frame, swirl tile): 1 source pixel of the 1920x1080 frame art.
+  Width-bound on portrait phones, height-bound on landscape and desktop, clamped at both ends.
+*/
+:root {
+  --u: clamp(0.35px, 100vmin / 860, 0.7px);
+  --frame-top: #{frame.u(frame.$top-height)};
+  --frame-bottom: #{frame.u(frame.$bottom-height)};
+}
+
 :root {
   --sp-color--base: #010710;
   --sp-color--contrast: #e2ded3;

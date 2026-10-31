@@ -1,0 +1,141 @@
+@use 'sass:list';
+@use 'sass:map';
+
+// Geometry of the phone frame. Sizes are source pixels of the art in assets/images/frame/, scaled by --u
+// (see variables.scss), so the numbers here and the files must match. Cut from the 1920x1080 frame art.
+// Two layers with identical pieces: `stone/` (gold and black, never recolored) and `glow/` (white, alpha = glow
+// strength) which is drawn above the stone and colored by CSS through a mask.
+$ext: 'png';
+
+// The four corners share one element. They never overlap the strips: a strip fills only the box between its
+// two corners, so no pixel is painted twice (overlapping glow would add up to a brighter patch).
+$corners: (
+  'corner-tr': (
+    w: 405,
+    h: 490,
+    pos: top right
+  ),
+  'corner-tl': (
+    w: 294,
+    h: 308,
+    pos: top left
+  ),
+  'corner-br': (
+    w: 187,
+    h: 261,
+    pos: bottom right
+  ),
+  'corner-bl': (
+    w: 433,
+    h: 128,
+    pos: bottom left
+  )
+);
+
+// Runic strip along the top and bottom edge, repeated horizontally from the left corner (its ends are not
+// capped yet). `from` / `to` are the corners it runs between.
+$strips: (
+  'top': (
+    w: 463,
+    h: 114,
+    pattern: (
+      w: 723,
+      h: 35
+    ),
+    from: 'corner-tl',
+    to: 'corner-tr'
+  ),
+  'bottom': (
+    w: 463,
+    h: 118,
+    pattern: (
+      w: 561,
+      h: 38
+    ),
+    from: 'corner-bl',
+    to: 'corner-br'
+  )
+);
+
+$top-height: 114;
+$bottom-height: 118;
+
+@function u($px) {
+  @return calc(#{$px} * var(--u));
+}
+
+@function image($set, $name) {
+  @return url('@/assets/images/frame/#{$set}/#{$name}.#{$ext}');
+}
+
+// Paints image lists as a background, or as a mask (the element's `background-color` shows through the alpha).
+@mixin paint($mask, $images, $positions, $sizes, $repeats) {
+  @if $mask {
+    -webkit-mask-image: $images;
+    mask-image: $images;
+    -webkit-mask-position: $positions;
+    mask-position: $positions;
+    -webkit-mask-size: $sizes;
+    mask-size: $sizes;
+    -webkit-mask-repeat: $repeats;
+    mask-repeat: $repeats;
+  } @else {
+    background-image: $images;
+    background-position: $positions;
+    background-size: $sizes;
+    background-repeat: $repeats;
+  }
+}
+
+// The four corners of a set, on a full-screen element.
+@mixin corners($set, $mask: false) {
+  $images: ();
+  $positions: ();
+  $sizes: ();
+  $repeats: ();
+
+  @each $name, $piece in $corners {
+    $images: list.append($images, image($set, $name), comma);
+    $positions: list.append($positions, map.get($piece, pos), comma);
+    $sizes: list.append($sizes, u(map.get($piece, w)) u(map.get($piece, h)), comma);
+    $repeats: list.append($repeats, no-repeat, comma);
+  }
+
+  @include paint($mask, $images, $positions, $sizes, $repeats);
+}
+
+// The strip of one edge (`top` / `bottom`): its box between the two corners, and the repeated art in it.
+@mixin strip($edge, $set, $mask: false) {
+  $piece: map.get($strips, $edge);
+  $from: map.get($corners, map.get($piece, from));
+  $to: map.get($corners, map.get($piece, to));
+
+  position: absolute;
+  #{$edge}: 0;
+  left: u(map.get($from, w));
+  right: u(map.get($to, w));
+  height: u(map.get($piece, h));
+  // softens the cut where the strip meets a corner (stone and glow alike, so both end the same way)
+  border-radius: 6px;
+
+  $images: image($set, 'strip-#{$edge}');
+  // Tiles are centered, so a cut tile ends up at both corners, cut by the same amount (not one clean end
+  // and one arbitrary cut), and a phone, where the box is narrower than a tile, shows the middle of it.
+  $positions: center $edge;
+  $sizes: u(map.get($piece, w)) u(map.get($piece, h));
+  $repeats: repeat-x;
+
+  // The stone strip also carries the glyph row, a second tile of its own width on top of the base tile.
+  // The two repeat at different lengths, so the pattern does not visibly restart with the base. It is
+  // stone art (not tinted), so the glow layer has no counterpart.
+  @if not $mask {
+    $pattern: map.get($piece, pattern);
+
+    $images: image($set, 'strip-pattern-#{$edge}'), $images;
+    $positions: (center $edge), $positions;
+    $sizes: (u(map.get($pattern, w)) u(map.get($pattern, h))), $sizes;
+    $repeats: repeat-x, $repeats;
+  }
+
+  @include paint($mask, $images, $positions, $sizes, $repeats);
+}

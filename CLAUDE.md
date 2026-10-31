@@ -15,7 +15,11 @@ Target: Android Chrome, installed as a PWA, used outdoors and often offline. iOS
 - `src/game/`: game content as data (POIs, sensor target and tuning, Yiga zone, app registry per mode). Riddles, keys and targets go here, never hardcoded in components.
 - `src/map/`: MapLibre style (BotW look) on OpenFreeMap vector tiles. Public service without guarantee: self-host as PMTiles before the real hunt.
 
+- `src/components/PhoneFrame.vue`: the ornamental frame (4 corners + tiling top/bottom strip), two layers: `frame/stone/*` (gold and black, as is) and `frame/glow/*` (white, alpha = glow strength) above it, colored by `--color-primary` through a CSS mask, so blue/red needs no extra files. Geometry lives in `src/assets/scss/_frame.scss`. Both sets share names and pixel sizes; `glow/back.png` is the brighter back-button circle. The files are currently rough placeholders auto-split from `background/original.png` (blue = glow); if you replace them, keep the sizes in `_frame.scss` in sync (CSS multiplies intrinsic size by `--u`) and `$ext` if the format changes.
+
 ## Conventions
+- Decorative art scales with one unit, `--u` (`variables.scss`: one source pixel of the 1920x1080 frame art, width-bound on portrait, clamped). Size art as `calc(N * var(--u))`, inset screens from the frame with `--frame-top` / `--frame-bottom`, never with pixel literals.
+- Full-screen surfaces (page, install gate, lightbox) get the swirl tile through `@include surface.surface` (`_surface.scss`), which also handles the Yiga tile.
 - Styles: SCSS, scoped, BEM-like `Block-element--modifier`. Colors via CSS vars from `src/assets/scss/variables.scss`.
 - Every listener, timer, stream and AudioContext must be released in `onUnmounted` (the composables do this).
 - Every GPS or NFC trigger needs a manual fallback, because GPS is unreliable outdoors.

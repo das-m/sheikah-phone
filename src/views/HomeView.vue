@@ -53,10 +53,21 @@ function onVersionTap() {
 <style lang="scss" scoped>
 .Homescreen {
   height: 100%;
-  padding: 50px 20px;
+  padding: var(--frame-top) 20px var(--frame-bottom);
   display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: center;
+  gap: 2.5rem;
+  overflow-y: auto;
+
+  // `auto` margins center the block, and unlike `justify-content: center` they never clip it when it overflows
+  > :first-child {
+    margin-top: auto;
+  }
+
+  > :last-child {
+    margin-bottom: auto;
+  }
 
   &-apps {
     display: flex;
@@ -64,13 +75,12 @@ function onVersionTap() {
     justify-content: center;
     flex-wrap: wrap;
     gap: 5px;
-    margin-bottom: 50px;
 
     &-item {
       display: block;
       text-align: center;
       color: var(--color-contrast);
-      width: 110px;
+      width: clamp(80px, 26vmin, 110px);
       flex-shrink: 0;
 
       &:before {
@@ -96,12 +106,6 @@ function onVersionTap() {
         }
       }
 
-      &--sensor {
-        &:before {
-          background-image: url(@/assets/images/ui/icons/sensor.svg);
-        }
-      }
-
       &--camera {
         &:before {
           background-image: url(@/assets/images/ui/icons/camera.svg);
@@ -114,12 +118,6 @@ function onVersionTap() {
         }
       }
 
-      &--reader {
-        &:before {
-          background-image: url(@/assets/images/ui/icons/reader.svg);
-        }
-      }
-
       &--yiga {
         &:before {
           background-image: url(@/assets/images/ui/icons/scanner.svg);
@@ -129,8 +127,9 @@ function onVersionTap() {
   }
 
   &-widgets {
-    position: absolute;
-    bottom: 100px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
 
     &-version {
       font-size: 0.6em;

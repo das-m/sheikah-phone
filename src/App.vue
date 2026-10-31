@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
-import { RouterLink, RouterView, useRoute } from 'vue-router'
+import { RouterView, useRoute } from 'vue-router'
 import InstallGate from './components/InstallGate.vue'
+import PhoneFrame from './components/PhoneFrame.vue'
 import SheikahLoader from './components/SheikahLoader.vue'
 import { useYigaMode } from './composables/useYigaMode'
 import { useYigaTrigger } from './composables/useYigaTrigger'
@@ -51,12 +52,7 @@ watch(mode, show)
 
 <template>
   <div class="Phone">
-    <header class="Phone-header">
-      <div class="Phone-header-left">
-        <router-link class="Phone-header-left-back" to="/" v-if="isBackButtonActive"></router-link>
-      </div>
-      <div class="Phone-header-right"></div>
-    </header>
+    <PhoneFrame :back="isBackButtonActive" />
 
     <InstallGate />
 
@@ -64,11 +60,6 @@ watch(mode, show)
       <SheikahLoader :show="showLoader" />
       <RouterView />
     </main>
-
-    <footer class="Phone-footer">
-      <div class="Phone-footer-left"></div>
-      <div class="Phone-footer-right"></div>
-    </footer>
   </div>
 </template>
 
@@ -77,7 +68,6 @@ watch(mode, show)
   position: relative;
   width: inherit;
   height: inherit;
-  background: url(@/assets/images/background/background.png);
 
   &-main {
     position: absolute;
@@ -86,86 +76,6 @@ watch(mode, show)
     right: 0;
     bottom: 0;
     left: 0;
-  }
-
-  &-footer,
-  &-header {
-    position: fixed;
-    z-index: 100;
-    left: 0;
-    right: 0;
-    display: flex;
-    align-items: stretch;
-    justify-content: flex-start;
-    background: transparent no-repeat;
-    background-size: 100% 100%;
-    pointer-events: none;
-
-    &-left,
-    &-right {
-      aspect-ratio: 1/1;
-      position: absolute;
-      z-index: 10;
-      width: 40vw;
-      max-width: 200px;
-      background: transparent no-repeat;
-      background-size: 100% 100%;
-      flex-shrink: 0;
-    }
-  }
-
-  &-header {
-    top: 0;
-    height: 50px;
-    background-image: url(@/assets/images/background/header-center.png);
-    background-size: 100% 100%;
-
-    &-left {
-      top: 0;
-      left: 0;
-      background-image: url(@/assets/images/background/header-left.png);
-
-      &-back {
-        width: 100%;
-        height: 100%;
-        display: block;
-        pointer-events: all;
-        aspect-ratio: 1/1;
-        background: transparent url(@/assets/images/ui/header-left-back.png) no-repeat;
-        background-size: 100% 100%;
-      }
-    }
-
-    &-right {
-      top: 0;
-      right: 0;
-      background-image: url(@/assets/images/background/header-right.png);
-    }
-  }
-
-  &-footer {
-    bottom: 0;
-    height: 50px;
-    background-image: url(@/assets/images/background/footer-center.png);
-    background-size: 100% 100%;
-
-    &-left,
-    &-right {
-      width: 20vw;
-      max-width: 100px;
-    }
-
-    &-left {
-      bottom: 0;
-      left: 0;
-      background-image: url(@/assets/images/background/footer-left.png);
-    }
-
-    &-right {
-      bottom: 0;
-      right: 0;
-      background-image: url(@/assets/images/background/footer-right.png);
-    }
   }
 }
 </style>

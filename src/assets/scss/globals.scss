@@ -1,3 +1,5 @@
+@use './surface';
+
 /* global transitions */
 
 .fade-enter-active,
@@ -25,7 +27,7 @@
 
 .pswp {
   &__bg {
-    background: var(--color-base) url(@/assets/images/background/background.png) !important;
+    @include surface.surface($important: true);
     backdrop-filter: blur(8px);
   }
 

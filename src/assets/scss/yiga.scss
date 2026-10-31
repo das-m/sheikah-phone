@@ -3,14 +3,11 @@
   covers images with blue baked in. Blue-only art is tinted with hue-rotate (blue #3CD3FC -> red);
   `*-red` files are hand-colored replacements where a tint is not enough (art that also holds
   other colors, or a background). Replace tinted spots with real red art when it exists.
+  The frame needs no override: its glow layer is white art colored by `--color-primary`.
 */
 $yiga-tint: hue-rotate(168deg);
 
 :root[data-mode='yiga'] {
-  .Phone {
-    background-image: url(@/assets/images/background/background-red.png);
-  }
-
   .SheikahLoader-logo,
   .InfoText-line-left,
   .InfoText-line-right,
@@ -22,35 +19,6 @@ $yiga-tint: hue-rotate(168deg);
   // upside down; `rotate` is separate from `transform`, which the loader transition animates
   .SheikahLoader-logo-main {
     rotate: 180deg;
-  }
-
-  // header and footer ornaments mix gold stone with a blue glow: recolored files, only the blues shifted
-  .Phone-header {
-    background-image: url(@/assets/images/background/header-center-red.png);
-  }
-
-  .Phone-header-left {
-    background-image: url(@/assets/images/background/header-left-red.png);
-  }
-
-  .Phone-header-left-back {
-    background-image: url(@/assets/images/ui/header-left-back-red.png);
-  }
-
-  .Phone-header-right {
-    background-image: url(@/assets/images/background/header-right-red.png);
-  }
-
-  .Phone-footer {
-    background-image: url(@/assets/images/background/footer-center-red.png);
-  }
-
-  .Phone-footer-left {
-    background-image: url(@/assets/images/background/footer-left-red.png);
-  }
-
-  .Phone-footer-right {
-    background-image: url(@/assets/images/background/footer-right-red.png);
   }
 
   // home tiles: frame and app icon share one box, so swap only the frame

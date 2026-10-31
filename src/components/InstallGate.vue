@@ -25,6 +25,8 @@ const message = computed(() => {
 </template>
 
 <style lang="scss" scoped>
+@use '@/assets/scss/surface';
+
 .InstallGate {
   position: fixed;
   z-index: 200;
@@ -38,7 +40,7 @@ const message = computed(() => {
   justify-content: center;
   gap: 2em;
   padding: 0 2em;
-  background: var(--color-base) url(@/assets/images/background/background.png) repeat;
+  @include surface.surface;
 
   &-button {
     padding: 1.2em 3em;
