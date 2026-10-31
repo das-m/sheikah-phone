@@ -8,6 +8,10 @@
   --u: clamp(0.35px, 100vmin / 860, 0.7px);
   --frame-top: #{frame.u(frame.$top-height)};
   --frame-bottom: #{frame.u(frame.$bottom-height)};
+  // widths of the corners, to keep content beside them
+  --frame-corner-tl: #{frame.corner-w('corner-tl')};
+  --frame-corner-tr: #{frame.corner-w('corner-tr')};
+  --frame-corner-br: #{frame.corner-w('corner-br')};
 }
 
 :root {

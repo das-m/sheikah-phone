@@ -43,31 +43,43 @@ const currentIconClass = computed(
 <template>
   <Transition name="fade" appear>
     <div class="WeatherWidget">
-      <template v-if="currentWeatherData">
-        <div class="WeatherWidget-icon" :class="currentIconClass"></div>
-        <div class="WeatherWidget-temperature">{{ currentTemperature }}</div>
-      </template>
-      <div class="WeatherWidget-loader" v-else></div>
+      <div class="WeatherWidget-current">
+        <template v-if="currentWeatherData">
+          <div class="WeatherWidget-icon" :class="currentIconClass"></div>
+          <div class="WeatherWidget-temperature">{{ currentTemperature }}</div>
+        </template>
+        <div class="WeatherWidget-loader" v-else></div>
+      </div>
+      <div class="WeatherWidget-label" aria-hidden="true">Wetter</div>
     </div>
   </Transition>
 </template>
 
 <style lang="scss" scoped>
+@use '@/assets/scss/widget';
+
+// The parent sets the alignment of the content through `--widget-align` (flex alignment).
 .WeatherWidget {
   position: relative;
-  margin: 1em auto;
   display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.75em;
+  flex-direction: column;
+  align-items: var(--widget-align, center);
   color: var(--color-primary);
   text-shadow: 0 0 10px var(--color-primary);
   line-height: 1;
 
+  &-current {
+    display: flex;
+    align-items: center;
+    gap: 0.75em;
+    padding: 0.2em 0;
+  }
+
+  &-label {
+    @include widget.label;
+  }
+
   &-loader {
-    position: absolute;
-    left: calc(50% - 0.75em);
-    top: -1em;
     width: 1.5em;
     height: 1.5em;
     background-image: url(@/assets/images/ui/loader.svg);

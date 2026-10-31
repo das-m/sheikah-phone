@@ -50,21 +50,29 @@ const seconds = computed(() => {
         <div class="divider">:</div>
         <div class="seconds">{{ seconds }}</div>
       </div>
-      <!--div class="ClockWidget-time-label"></div>-->
+      <div class="ClockWidget-time-label" aria-hidden="true">Zeit</div>
     </div>
   </div>
 </template>
 
 <style lang="scss" scoped>
+@use '@/assets/scss/widget';
+
+// The parent sets the look through `--widget-clock-size` and `--widget-align` (flex alignment of the content).
 .ClockWidget {
   position: relative;
-  font-size: 2.5em;
   color: var(--color-primary);
   text-shadow: 0 0 10px var(--color-primary);
 
   &-time {
+    display: flex;
+    flex-direction: column;
+    align-items: var(--widget-align, center);
+
+    // only the digits are scaled, so the label keeps the base size like the weather label
     &-display {
       display: flex;
+      font-size: var(--widget-clock-size, 2.5em);
       line-height: 1.2;
 
       div {
@@ -73,9 +81,7 @@ const seconds = computed(() => {
     }
 
     &-label {
-      background: url(@/assets/images/ui/labels/sheikah-clock.svg) center no-repeat;
-      background-size: contain;
-      height: 0.3em;
+      @include widget.label;
     }
   }
 }

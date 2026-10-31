@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onUnmounted, ref, watch } from 'vue'
 
+import BackButton from '@/components/BackButton.vue'
 import { useCamera } from '@/composables/useCamera'
 import { useQrScanner } from '@/composables/useQrScanner'
 import { useUnlocks } from '@/composables/useUnlocks'
@@ -46,6 +47,7 @@ onUnmounted(() => {
 <template>
   <Transition name="fade" appear>
     <div class="App">
+      <BackButton />
       <div class="App-camera" v-if="!hasFailed">
         <div class="App-camera-icon"></div>
         <video ref="videoEl" autoplay playsinline muted></video>

@@ -9,9 +9,9 @@ $yiga-tint: hue-rotate(168deg);
 
 :root[data-mode='yiga'] {
   .SheikahLoader-logo,
+  .BackButton,
   .InfoText-line-left,
   .InfoText-line-right,
-  .ClockWidget-time-label,
   .WeatherWidget-icon {
     filter: $yiga-tint;
   }

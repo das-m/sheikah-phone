@@ -64,6 +64,11 @@ $bottom-height: 118;
   @return calc(#{$px} * var(--u));
 }
 
+// Width of a corner, for content that has to stay beside it.
+@function corner-w($name) {
+  @return u(map.get(map.get($corners, $name), w));
+}
+
 @function image($set, $name) {
   @return url('@/assets/images/frame/#{$set}/#{$name}.#{$ext}');
 }

@@ -1,0 +1,10 @@
+// Runic caption under a widget, set in the Sheikah font.
+@mixin label {
+  font-family: 'Sheikah', sans-serif;
+  font-size: 1.1em;
+  font-weight: 400;
+  line-height: 1;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+  color: var(--color-primary);
+}

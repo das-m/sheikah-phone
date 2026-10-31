@@ -16,13 +16,9 @@ const LOADER_MS = 1200
 const showLoader = ref(false)
 const route = useRoute()
 
-const isBackButtonActive = ref(false)
-
 watch(
   () => route.path,
   (_, oldPath) => {
-    isBackButtonActive.value = route.name !== 'home'
-
     // A mode switch redirects away from the other mode's app. The switch already plays its sound and the loader.
     if (!isRouteAvailable(oldPath, mode.value)) return
 
@@ -52,7 +48,7 @@ watch(mode, show)
 
 <template>
   <div class="Phone">
-    <PhoneFrame :back="isBackButtonActive" />
+    <PhoneFrame />
 
     <InstallGate />
 

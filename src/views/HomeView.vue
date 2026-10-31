@@ -33,6 +33,7 @@ function onVersionTap() {
 <template>
   <Transition name="fade" appear>
     <div class="Homescreen">
+      <ClockWidget class="Homescreen-clock" />
       <div class="Homescreen-apps">
         <router-link
           v-for="app in visibleApps"
@@ -41,35 +42,45 @@ function onVersionTap() {
           :to="app.route"
         ></router-link>
       </div>
-      <div class="Homescreen-widgets">
-        <WeatherWidget />
-        <ClockWidget />
-        <div class="Homescreen-widgets-version" @click="onVersionTap">v{{ version }}</div>
-      </div>
+      <WeatherWidget class="Homescreen-weather" />
+      <div class="Homescreen-version" @click="onVersionTap">v{{ version }}</div>
     </div>
   </Transition>
 </template>
 
 <style lang="scss" scoped>
+// Portrait: clock on top, apps in the middle, weather at the bottom.
+// Landscape: clock and weather in the upper corners, apps below them (see the media query).
+// The grid row of the apps takes the free space, and unlike centering it never clips when content overflows.
 .Homescreen {
   height: 100%;
-  padding: var(--frame-top) 20px var(--frame-bottom);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2.5rem;
+  padding: calc(var(--frame-top) + 1.5rem) 20px calc(var(--frame-bottom) + 1rem);
+  display: grid;
+  grid-template-columns: 1fr;
+  grid-template-rows: auto 1fr auto auto;
+  grid-template-areas: 'clock' 'apps' 'weather' 'version';
+  justify-items: center;
   overflow-y: auto;
 
-  // `auto` margins center the block, and unlike `justify-content: center` they never clip it when it overflows
-  > :first-child {
-    margin-top: auto;
+  &-clock {
+    grid-area: clock;
   }
 
-  > :last-child {
-    margin-bottom: auto;
+  &-weather {
+    grid-area: weather;
+  }
+
+  &-version {
+    grid-area: version;
+    font-size: 0.6em;
+    margin-top: 1em;
+    text-align: center;
+    color: var(--color-primary);
   }
 
   &-apps {
+    grid-area: apps;
+    align-self: center;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -126,16 +137,26 @@ function onVersionTap() {
     }
   }
 
-  &-widgets {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
+  @media (orientation: landscape) {
+    padding-inline: 0;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: auto 1fr auto;
+    grid-template-areas: 'clock weather' 'apps apps' 'version version';
 
-    &-version {
-      font-size: 0.6em;
-      margin-top: 1em;
-      text-align: center;
-      color: var(--color-primary);
+    // Distances from the screen edge, in art units. Not equal on purpose: an optical adjustment, so the
+    // two widgets look evenly spaced beside the different corner art. Only the widgets are inset, the apps
+    // and the version stay centered on the screen.
+    &-clock {
+      --widget-clock-size: 1.8em;
+      --widget-align: flex-start;
+      justify-self: start;
+      margin-left: calc(195 * var(--u));
+    }
+
+    &-weather {
+      --widget-align: flex-end;
+      justify-self: end;
+      margin-right: calc(220 * var(--u));
     }
   }
 }

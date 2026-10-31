@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import BackButton from '@/components/BackButton.vue'
 import MediaList from '@/components/MediaList.vue'
 import type { MediaImage } from '@/types/media'
 
@@ -75,6 +76,7 @@ const images: MediaImage[] = pictures.map((picture, index) => {
 <template>
   <Transition name="fade" appear>
     <div class="App">
+      <BackButton />
       <div class="App-media">
         <div class="App-media-scroller">
           <MediaList :images="images" />
