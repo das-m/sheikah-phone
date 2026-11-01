@@ -7,7 +7,12 @@ interface BeforeInstallPromptEvent extends Event {
 
 // Module-level state: Chrome fires `beforeinstallprompt` once, early, possibly before any component exists.
 const installEvent = ref<BeforeInstallPromptEvent | null>(null)
-const isInstalled = ref(window.matchMedia('(display-mode: standalone)').matches)
+// The manifest asks for `fullscreen`, which falls back to `standalone`: either way this is the installed app.
+const isRunningAsApp = ['fullscreen', 'standalone', 'minimal-ui'].some(
+  (mode) => window.matchMedia(`(display-mode: ${mode})`).matches
+)
+// Installed from this browser tab just now. The tab must not turn into the app: the user opens the installed one.
+const isInstalled = ref(false)
 const wasDeclined = ref(false)
 const isDismissed = ref(false)
 
@@ -31,7 +36,10 @@ async function install() {
   if (outcome === 'dismissed') wasDeclined.value = true
 }
 
-/** Install state of the PWA. The gate is shown in production browser tabs until installed or dismissed. */
+/**
+ * Install state of the PWA. The gate is shown in production browser tabs until dismissed. After an install it
+ * stays (without a way past it) and asks to open the installed app.
+ */
 export function useInstall() {
   return {
     canInstall: computed(() => installEvent.value !== null),
@@ -39,7 +47,7 @@ export function useInstall() {
     wasDeclined,
     isDismissed,
     shouldShowGate: computed(
-      () => import.meta.env.PROD && !isInstalled.value && !isDismissed.value
+      () => import.meta.env.PROD && !isRunningAsApp && (isInstalled.value || !isDismissed.value)
     ),
     install,
     dismiss: () => (isDismissed.value = true)

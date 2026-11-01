@@ -37,7 +37,7 @@ export default defineConfig({
         id: '/',
         start_url: '/',
         lang: 'de',
-        orientation: 'portrait',
+        orientation: 'landscape',
         description: '△△△',
         theme_color: '#3CD3FC',
         background_color: '#000000',

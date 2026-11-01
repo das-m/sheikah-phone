@@ -4,9 +4,11 @@ import { computed } from 'vue'
 import InfoText from '@/components/InfoText.vue'
 import { useInstall } from '@/composables/useInstall'
 
-const { canInstall, wasDeclined, shouldShowGate, install, dismiss } = useInstall()
+const { canInstall, isInstalled, wasDeclined, shouldShowGate, install, dismiss } = useInstall()
 
 const message = computed(() => {
+  if (isInstalled.value)
+    return 'Die Tafel ist installiert. Schließe den Browser und öffne sie vom Startbildschirm.'
   if (canInstall.value) return 'Installiere die Tafel, um sie immer bei dir zu tragen.'
   if (wasDeclined.value) return 'Ohne Installation fehlt der Tafel ihre Kraft.'
   return 'Öffne das Browser-Menü und wähle „App installieren“ oder „Zum Startbildschirm hinzufügen“.'
@@ -19,7 +21,7 @@ const message = computed(() => {
       <InfoText title="Sheikah-Tafel" :message="message" />
 
       <button class="InstallGate-button" v-if="canInstall" @click="install">Installieren</button>
-      <button class="InstallGate-skip" @click="dismiss">Später</button>
+      <button class="InstallGate-skip" v-if="!isInstalled" @click="dismiss">Später</button>
     </div>
   </Transition>
 </template>

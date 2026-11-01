@@ -34,7 +34,8 @@ Target: Android Chrome, installed as a PWA, used outdoors and often offline. iOS
 ## Gotchas
 - Yiga mode (red UI, own app set): flip phone head-down + shake inside `yigaZone` (`src/game/zones.ts`, placeholder position), shake again to reset. Not persisted. Fallback for bad GPS, also the way to test in a browser: tap the version on the home screen 7 times to toggle the mode directly (no zone, flip or shake). Colors switch via `:root[data-mode='yiga']` in `variables.scss`; baked-in blue images are overridden in `src/assets/scss/yiga.scss` (`*-red` files are script-made placeholders). New apps go in `src/game/apps.ts` with a mode.
 - Vibration and sounds need a prior tap, like all audio.
-- `InstallGate` only shows in production builds in a browser tab. Chrome fires `beforeinstallprompt` once, so `useInstall` captures it at module load.
+- The manifest asks for `display: fullscreen` and `orientation: landscape`; Android reads it at install time, so change it means reinstalling. Text scales from `--font-base` (`variables.scss`, set on `body`), the art from `--u`.
+- `InstallGate` only shows in production builds in a browser tab (any `display-mode` but `browser` counts as the app). After an install from the tab it stays, without "Später", and asks to open the installed app: the tab must not turn into the app. Chrome fires `beforeinstallprompt` once, so `useInstall` captures it at module load.
 - Visual checks: build, `npx vite preview`, screenshot with headless Chromium.
 - The map needs no API key. Never commit keys.
 - MapLibre markers own their element's `transform`: rotate a child element, never the marker element (the user marker rotates one `-heading` child holding the view cone `map/direction.png`, whose tip and lean are constants in `MapApp.vue`, and the arrow). Its worker is wired via `setWorkerUrl` in `MapApp.vue` (without it the map is blank in dev and production).
