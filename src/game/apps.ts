@@ -10,6 +10,7 @@ export interface AppEntry {
 export const apps: AppEntry[] = [
   { id: 'map', route: '/map', mode: 'sheikah' },
   { id: 'camera', route: '/camera', mode: 'sheikah' },
+  { id: 'scanner', route: '/scanner', mode: 'sheikah' },
   { id: 'media', route: '/media', mode: 'sheikah' },
   // Placeholder until the real Yiga apps exist.
   { id: 'yiga', route: '/yiga', mode: 'yiga' }

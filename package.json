@@ -16,6 +16,7 @@
     "check": "run-s type-check lint:check test"
   },
   "dependencies": {
+    "jsqr": "^1.4.0",
     "maplibre-gl": "^6.15.0",
     "photoswipe": "^5.4.3",
     "vue": "^3.4.21",

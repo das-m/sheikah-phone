@@ -26,6 +26,11 @@ const router = createRouter({
       component: () => import('../views/apps/CameraApp.vue')
     },
     {
+      path: '/scanner',
+      name: 'scanner',
+      component: () => import('../views/apps/ScannerApp.vue')
+    },
+    {
       path: '/media',
       name: 'media',
       component: () => import('../views/apps/MediaApp.vue')

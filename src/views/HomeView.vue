@@ -123,6 +123,12 @@ function onVersionTap() {
         }
       }
 
+      &--scanner {
+        &:before {
+          background-image: url(@/assets/images/ui/icons/scanner.svg);
+        }
+      }
+
       &--media {
         &:before {
           background-image: url(@/assets/images/ui/icons/picture.svg);

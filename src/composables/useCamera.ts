@@ -1,7 +1,19 @@
 import { onMounted, onUnmounted, ref, type Ref } from 'vue'
 
-/** Streams the rear camera into `videoEl` and releases it on unmount. */
-export function useCamera(videoEl: Ref<HTMLVideoElement | null>) {
+const defaultConstraints: MediaTrackConstraints = {
+  facingMode: { ideal: 'environment' },
+  width: { ideal: 1080 },
+  height: { ideal: 1920 }
+}
+
+/**
+ * Streams the rear camera into `videoEl` and releases it on unmount.
+ * `constraints` replaces the default video constraints, e.g. a smaller frame for the scanner.
+ */
+export function useCamera(
+  videoEl: Ref<HTMLVideoElement | null>,
+  constraints: MediaTrackConstraints = defaultConstraints
+) {
   const isReady = ref(false)
   const hasFailed = ref(false)
 
@@ -19,13 +31,7 @@ export function useCamera(videoEl: Ref<HTMLVideoElement | null>) {
       return
     }
     try {
-      const media = await navigator.mediaDevices.getUserMedia({
-        video: {
-          facingMode: { ideal: 'environment' },
-          width: { ideal: 1080 },
-          height: { ideal: 1920 }
-        }
-      })
+      const media = await navigator.mediaDevices.getUserMedia({ video: constraints })
       if (isUnmounted) {
         media.getTracks().forEach((track) => track.stop())
         return
