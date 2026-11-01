@@ -18,6 +18,9 @@ export interface Orientation {
 
 const toRad = Math.PI / 180
 
+/** About the average distance of `fairyPosition` from the head, in metres. */
+export const FAIRY_MEAN_RADIUS = 1.5
+
 /**
  * Where the fairy is `tSec` seconds after she appeared, in metres around the user's head.
  * World frame: x east, y north, z up. Azimuth, elevation and radius are each a few incommensurate sines, so the path
@@ -67,17 +70,19 @@ export function worldToCamera(p: Vec3, orientation: Orientation, screenAngle: nu
 
 type Row = readonly [number, number, number]
 
-const dot = (row: Row, p: Vec3) => row[0] * p.x + row[1] * p.y + row[2] * p.z
 const negate = (row: Row): Row => [-row[0], -row[1], -row[2]]
+const toVec = (row: Row): Vec3 => ({ x: row[0], y: row[1], z: row[2] })
+const dot = (a: Vec3, b: Vec3) => a.x * b.x + a.y * b.y + a.z * b.z
 
-/**
- * `worldToCamera` for one orientation, with the trigonometry done once: build it per frame and apply it to the fairy
- * and every trail point.
- */
-export function createViewTransform(
-  orientation: Orientation,
-  screenAngle: number
-): (p: Vec3) => Vec3 {
+/** The camera's axes as world vectors (x east, y north, z up): `forward` is where the view points. */
+export interface ViewBasis {
+  right: Vec3
+  up: Vec3
+  forward: Vec3
+}
+
+/** The camera's right, up and forward axes in the world, for one orientation and screen rotation. */
+export function viewBasis(orientation: Orientation, screenAngle: number): ViewBasis {
   const a = orientation.alpha * toRad
   const b = orientation.beta * toRad
   const g = orientation.gamma * toRad
@@ -110,7 +115,31 @@ export function createViewTransform(
       ;[right, up] = [deviceY, negate(deviceX)]
       break
   }
+  return { right: toVec(right), up: toVec(up), forward: toVec(forward) }
+}
+
+/**
+ * `worldToCamera` for one orientation, with the trigonometry done once: build it per frame and apply it to the fairy
+ * and every trail point.
+ */
+export function createViewTransform(
+  orientation: Orientation,
+  screenAngle: number
+): (p: Vec3) => Vec3 {
+  return transformFromBasis(viewBasis(orientation, screenAngle))
+}
+
+/** The same transform from a basis you already have, e.g. one that is also given to the fairy's brain. */
+export function transformFromBasis({ right, up, forward }: ViewBasis): (p: Vec3) => Vec3 {
   return (p) => ({ x: dot(right, p), y: dot(up, p), z: dot(forward, p) })
+}
+
+/** Angle in degrees between the view direction and the direction to `position`; 180 for the origin. */
+export function focusAngleDeg(forward: Vec3, position: Vec3): number {
+  const distance = Math.hypot(position.x, position.y, position.z)
+  if (distance === 0) return 180
+  const cos = dot(forward, position) / (distance * Math.hypot(forward.x, forward.y, forward.z))
+  return (Math.acos(Math.min(1, Math.max(-1, cos))) * 180) / Math.PI
 }
 
 export interface ScreenPoint {

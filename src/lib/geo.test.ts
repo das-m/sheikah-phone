@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import {
   angleDifference,
+  bearingDegrees,
   compassHeading,
   distanceMeters,
+  isFacing,
   metersPerPixel,
   normalizeDegrees
 } from './geo'
@@ -45,6 +47,20 @@ describe('distanceMeters', () => {
   })
 })
 
+describe('bearingDegrees', () => {
+  it('points north, east, south and west', () => {
+    const origin = { lat: 48, lng: 9 }
+    expect(bearingDegrees(origin, { lat: 49, lng: 9 })).toBeCloseTo(0, 5)
+    expect(bearingDegrees(origin, { lat: 48, lng: 10 })).toBeCloseTo(90, 0)
+    expect(bearingDegrees(origin, { lat: 47, lng: 9 })).toBeCloseTo(180, 5)
+    expect(bearingDegrees(origin, { lat: 48, lng: 8 })).toBeCloseTo(270, 0)
+  })
+  it('never returns a negative angle', () => {
+    expect(bearingDegrees(favorite, schloss)).toBeGreaterThanOrEqual(0)
+    expect(bearingDegrees(favorite, schloss)).toBeLessThan(360)
+  })
+})
+
 describe('compassHeading', () => {
   it('flat: is 0 when the top edge points north, and turns clockwise as alpha decreases', () => {
     expect(compassHeading(0, 0, 0)).toBeCloseTo(0, 5)
@@ -57,6 +73,17 @@ describe('compassHeading', () => {
     expect(compassHeading(270, 90, 0)).toBeCloseTo(90, 5)
     expect(compassHeading(180, 90, 0)).toBeCloseTo(180, 5)
     expect(compassHeading(90, 90, 0)).toBeCloseTo(270, 5)
+  })
+})
+
+describe('isFacing', () => {
+  it('handles the 360 wrap', () => {
+    expect(isFacing(355, 5, 30)).toBe(true)
+    expect(isFacing(5, 355, 30)).toBe(true)
+  })
+  it('rejects headings outside the tolerance', () => {
+    expect(isFacing(0, 90, 30)).toBe(false)
+    expect(isFacing(0, 180, 30)).toBe(false)
   })
 })
 

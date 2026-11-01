@@ -4,7 +4,9 @@ import {
   fairyPlaybackRate,
   fairyPosition,
   fairySpeed,
+  focusAngleDeg,
   project,
+  viewBasis,
   worldToCamera
 } from './fairy'
 
@@ -125,6 +127,44 @@ describe('worldToCamera', () => {
     expect(rotated.y).toBeCloseTo(1)
     expect(worldToCamera(east, lookingNorth, 180).x).toBeCloseTo(-1)
     expect(worldToCamera(east, lookingNorth, 270).y).toBeCloseTo(-1)
+  })
+})
+
+describe('viewBasis', () => {
+  it('is right = east, up = up, forward = north for a phone upright and looking north', () => {
+    const { right, up, forward } = viewBasis(lookingNorth, 0)
+    expect(right.x).toBeCloseTo(1)
+    expect(up.z).toBeCloseTo(1)
+    expect(forward.y).toBeCloseTo(1)
+  })
+
+  it('agrees with worldToCamera: the camera sees a world point at its basis coordinates', () => {
+    const orientation = { alpha: 40, beta: 70, gamma: -20 }
+    const { right, up, forward } = viewBasis(orientation, 90)
+    const p = { x: 1, y: 2, z: 0.5 }
+    const camera = worldToCamera(p, orientation, 90)
+    expect(camera.x).toBeCloseTo(right.x * p.x + right.y * p.y + right.z * p.z)
+    expect(camera.y).toBeCloseTo(up.x * p.x + up.y * p.y + up.z * p.z)
+    expect(camera.z).toBeCloseTo(forward.x * p.x + forward.y * p.y + forward.z * p.z)
+  })
+})
+
+describe('focusAngleDeg', () => {
+  const north = { x: 0, y: 1, z: 0 }
+
+  it('is 0 straight ahead, 90 to the side, 180 behind', () => {
+    expect(focusAngleDeg(north, { x: 0, y: 2, z: 0 })).toBeCloseTo(0)
+    expect(focusAngleDeg(north, { x: 2, y: 0, z: 0 })).toBeCloseTo(90)
+    expect(focusAngleDeg(north, { x: 0, y: -1, z: 0 })).toBeCloseTo(180)
+  })
+
+  it('is 45 diagonally and does not depend on the distance', () => {
+    expect(focusAngleDeg(north, { x: 0, y: 1, z: 1 })).toBeCloseTo(45)
+    expect(focusAngleDeg(north, { x: 0, y: 5, z: 5 })).toBeCloseTo(45)
+  })
+
+  it('is 180 for the origin', () => {
+    expect(focusAngleDeg(north, { x: 0, y: 0, z: 0 })).toBe(180)
   })
 })
 
