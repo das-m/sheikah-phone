@@ -62,6 +62,22 @@ export function fairyPlaybackRate(speed: number): number {
  * `screenAngle` is `screen.orientation.angle`, since the orientation angles are relative to the device's natural (portrait) pose.
  */
 export function worldToCamera(p: Vec3, orientation: Orientation, screenAngle: number): Vec3 {
+  return createViewTransform(orientation, screenAngle)(p)
+}
+
+type Row = readonly [number, number, number]
+
+const dot = (row: Row, p: Vec3) => row[0] * p.x + row[1] * p.y + row[2] * p.z
+const negate = (row: Row): Row => [-row[0], -row[1], -row[2]]
+
+/**
+ * `worldToCamera` for one orientation, with the trigonometry done once: build it per frame and apply it to the fairy
+ * and every trail point.
+ */
+export function createViewTransform(
+  orientation: Orientation,
+  screenAngle: number
+): (p: Vec3) => Vec3 {
   const a = orientation.alpha * toRad
   const b = orientation.beta * toRad
   const g = orientation.gamma * toRad
@@ -73,23 +89,28 @@ export function worldToCamera(p: Vec3, orientation: Orientation, screenAngle: nu
     Math.cos(g),
     Math.sin(g)
   ]
-  // W3C rotation Rz(alpha) * Rx(beta) * Ry(gamma), device -> world. The transpose takes world -> device.
-  const dx = (cA * cG - sA * sB * sG) * p.x + (cG * sA + cA * sB * sG) * p.y - cB * sG * p.z
-  const dy = -cB * sA * p.x + cA * cB * p.y + sB * p.z
-  const dz = (cG * sA * sB + cA * sG) * p.x + (sA * sG - cA * cG * sB) * p.y + cB * cG * p.z
+  // W3C rotation Rz(alpha) * Rx(beta) * Ry(gamma), device -> world. Its transpose takes world -> device: these are
+  // the device axes (x right, y up the screen, z out of the screen) expressed as rows over the world axes.
+  const deviceX: Row = [cA * cG - sA * sB * sG, cG * sA + cA * sB * sG, -cB * sG]
+  const deviceY: Row = [-cB * sA, cA * cB, sB]
+  const deviceZ: Row = [cG * sA * sB + cA * sG, sA * sG - cA * cG * sB, cB * cG]
 
-  // Device axes: x right, y up the screen, z out of the screen. The rear camera looks along -z.
-  const forward = -dz
+  // The rear camera looks along -z; the screen axes are the device axes turned by the screen rotation.
+  const forward = negate(deviceZ)
+  let right = deviceX
+  let up = deviceY
   switch (((Math.round(screenAngle / 90) % 4) + 4) % 4) {
     case 1:
-      return { x: -dy, y: dx, z: forward }
+      ;[right, up] = [negate(deviceY), deviceX]
+      break
     case 2:
-      return { x: -dx, y: -dy, z: forward }
+      ;[right, up] = [negate(deviceX), negate(deviceY)]
+      break
     case 3:
-      return { x: dy, y: -dx, z: forward }
-    default:
-      return { x: dx, y: dy, z: forward }
+      ;[right, up] = [deviceY, negate(deviceX)]
+      break
   }
+  return (p) => ({ x: dot(right, p), y: dot(up, p), z: dot(forward, p) })
 }
 
 export interface ScreenPoint {

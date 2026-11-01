@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { fairyPlaybackRate, fairyPosition, fairySpeed, project, worldToCamera } from './fairy'
+import {
+  createViewTransform,
+  fairyPlaybackRate,
+  fairyPosition,
+  fairySpeed,
+  project,
+  worldToCamera
+} from './fairy'
 
 // Phone held upright in portrait, back camera looking north.
 const lookingNorth = { alpha: 0, beta: 90, gamma: 0 }
@@ -94,6 +101,21 @@ describe('worldToCamera', () => {
     expect(below.z).toBeCloseTo(1)
   })
 
+  it('handles landscape, where gamma is about -90 (phone upright, top to the left, looking north)', () => {
+    // Device x points up, y points west, z points south: the columns of the rotation for these angles.
+    const landscape = { alpha: 90, beta: 0, gamma: -90 }
+    const ahead = worldToCamera({ x: 0, y: 2, z: 0 }, landscape, 90)
+    expect(ahead.x).toBeCloseTo(0)
+    expect(ahead.y).toBeCloseTo(0)
+    expect(ahead.z).toBeCloseTo(2)
+    const east = worldToCamera({ x: 1, y: 0, z: 0 }, landscape, 90)
+    expect(east.x).toBeCloseTo(1)
+    expect(east.y).toBeCloseTo(0)
+    const up = worldToCamera({ x: 0, y: 0, z: 1 }, landscape, 90)
+    expect(up.x).toBeCloseTo(0)
+    expect(up.y).toBeCloseTo(1)
+  })
+
   it('swaps the screen axes with the screen rotation', () => {
     const east = { x: 1, y: 0, z: 0 }
     const right = worldToCamera(east, lookingNorth, 0)
@@ -103,6 +125,19 @@ describe('worldToCamera', () => {
     expect(rotated.y).toBeCloseTo(1)
     expect(worldToCamera(east, lookingNorth, 180).x).toBeCloseTo(-1)
     expect(worldToCamera(east, lookingNorth, 270).y).toBeCloseTo(-1)
+  })
+})
+
+describe('createViewTransform', () => {
+  it('gives the same result as worldToCamera for every point', () => {
+    const orientation = { alpha: 40, beta: 70, gamma: -20 }
+    const transform = createViewTransform(orientation, 270)
+    for (const p of [
+      { x: 1, y: 2, z: 0.5 },
+      { x: -1.5, y: 0.3, z: -0.4 }
+    ]) {
+      expect(transform(p)).toEqual(worldToCamera(p, orientation, 270))
+    }
   })
 })
 

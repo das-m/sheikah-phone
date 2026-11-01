@@ -4,11 +4,11 @@ import { onMounted, onUnmounted, ref } from 'vue'
 import { useFairySound } from '@/composables/useFairySound'
 import { useOrientation } from '@/composables/useOrientation'
 import {
+  createViewTransform,
   fairyPlaybackRate,
   fairyPosition,
   fairySpeed,
-  project,
-  worldToCamera
+  project
 } from '@/lib/fairy'
 import type { Vec3 } from '@/lib/gesture'
 
@@ -88,7 +88,8 @@ onMounted(() => {
 
     const t = (now - start) / 1000
     const position = fairyPosition(t)
-    const camera = worldToCamera(position, current, angle)
+    const toCamera = createViewTransform(current, angle)
+    const camera = toCamera(position)
     sound.update(camera, fairyPlaybackRate(fairySpeed(t)))
 
     if (now - lastSpawn >= TRAIL_SPAWN_MS) {
@@ -109,7 +110,7 @@ onMounted(() => {
     g!.globalCompositeOperation = 'lighter'
     // The sparkles live in the world, so they stay put while the phone turns instead of sticking to the screen.
     for (const sparkle of sparkles) {
-      const point = project(worldToCamera(sparkle.position, current, angle), width, height)
+      const point = project(toCamera(sparkle.position), width, height)
       if (!point) continue
       const age = (now - sparkle.born) / TRAIL_LIFE_MS
       const twinkle = 0.55 + 0.45 * Math.sin(now * 0.025 + sparkle.phase)
