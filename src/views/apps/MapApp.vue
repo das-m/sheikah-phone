@@ -26,6 +26,8 @@ const ludwigsburg: LatLng = { lat: 48.897551, lng: 9.191567 }
 // painted, but not longer than REVEAL_WAIT_MAX_MS (tiles may never come when offline).
 const REVEAL_AFTER_MS = 1300
 const REVEAL_WAIT_MAX_MS = 4000
+// An area outline wider than this is not drawn.
+const MAX_AREA_OUTLINE_PX = 4000
 
 const { position: userPosition } = useGeolocation()
 const { heading } = useHeading()
@@ -44,6 +46,8 @@ interface ZoomMarker {
   content: HTMLElement
   range: Visibility
   onZoom?: (zoom: number) => void
+  /** The opacity last written, -1 before the first update. */
+  opacity: number
 }
 const zoomMarkers: ZoomMarker[] = []
 
@@ -60,7 +64,7 @@ function addMarker(
   element.className = 'App-map-marker'
   element.appendChild(content)
   new maplibregl.Marker({ element }).setLngLat(toLngLat(position)).addTo(map)
-  zoomMarkers.push({ content, range, onZoom })
+  zoomMarkers.push({ content, range, onZoom, opacity: -1 })
 }
 
 function createPoi(poi: Poi) {
@@ -95,7 +99,10 @@ function createArea(area: Area) {
   el.appendChild(title)
   addMarker(area.position, area, el, (zoom) => {
     const size = (2 * area.radiusMeters) / metersPerPixel(area.position.lat, zoom)
-    el.style.setProperty('--size', `${size}px`)
+    // Once the outline is wider than several screens it is not drawn (a huge layer is costly on a phone).
+    const huge = size > MAX_AREA_OUTLINE_PX
+    el.classList.toggle('App-map-area--huge', huge)
+    el.style.setProperty('--size', huge ? '0px' : `${size}px`)
   })
 }
 
@@ -118,11 +125,16 @@ function createRegion(region: Region) {
 function updateZoomMarkers() {
   if (!map) return
   const zoom = map.getZoom()
-  for (const { content, range, onZoom } of zoomMarkers) {
-    const opacity = zoomOpacity(zoom, range)
-    content.style.opacity = String(opacity)
-    content.style.visibility = opacity === 0 ? 'hidden' : 'visible'
-    onZoom?.(zoom)
+  for (const marker of zoomMarkers) {
+    const opacity = zoomOpacity(zoom, marker.range)
+    // Nothing to do for a marker that stays invisible (the zoom event fires every frame).
+    if (opacity === 0 && marker.opacity === 0) continue
+    if (opacity !== marker.opacity) {
+      marker.opacity = opacity
+      marker.content.style.opacity = String(opacity)
+      marker.content.style.visibility = opacity === 0 ? 'hidden' : 'visible'
+    }
+    marker.onZoom?.(zoom)
   }
 }
 
@@ -155,7 +167,9 @@ function applyHeading(value: number | null) {
 
 // Third beat of the intro: the map is revealed by a circle growing from the user (or the map center).
 function reveal() {
-  if (!map || !root.value) return
+  if (revealed.value || !map || !root.value) return
+  revealTimers.forEach((timer) => window.clearTimeout(timer))
+  revealTimers = []
   const origin = map.project(toLngLat(userPosition.value ?? ludwigsburg))
   root.value.style.setProperty('--reveal-x', `${origin.x}px`)
   root.value.style.setProperty('--reveal-y', `${origin.y}px`)
@@ -202,10 +216,10 @@ onMounted(() => {
     attributionControl: { compact: true }
   })
 
-  // Order is the stacking order: areas below the region names below the POIs.
+  // Order is the stacking order: areas below the POIs below the region names (which do not take pointer events).
   areas.forEach(createArea)
-  regions.forEach(createRegion)
   pois.forEach(createPoi)
+  regions.forEach(createRegion)
   updateZoomMarkers()
   map.on('zoom', updateZoomMarkers)
 
@@ -386,7 +400,9 @@ $settle-delay: 0.6s;
       border: 2px solid var(--color-primary);
       border-radius: 50%;
       pointer-events: none;
-      animation: user-ping 1.4s $user-delay ease-out 2 both;
+      // invisible outside of its keyframes (a backwards fill would show the ring during the delay)
+      opacity: 0;
+      animation: user-ping 1.4s $user-delay ease-out 2 forwards;
     }
 
     // a late GPS fix: no intro to wait for
@@ -410,7 +426,7 @@ $settle-delay: 0.6s;
       position: relative;
       width: var(--size);
       height: var(--size);
-      border: 3px dotted var(--color-secondary);
+      border: max(2px, calc(4 * var(--u))) dotted var(--color-secondary);
       border-radius: 50%;
       background: color-mix(in srgb, var(--color-secondary) 8%, transparent);
       box-shadow:
@@ -421,6 +437,12 @@ $settle-delay: 0.6s;
     }
 
     // area.png is 84x84
+    :deep(.App-map-area--huge) {
+      border: none;
+      background: none;
+      box-shadow: none;
+    }
+
     :deep(.App-map-area-ring),
     :deep(.App-map-area-icon) {
       position: absolute;
@@ -430,13 +452,13 @@ $settle-delay: 0.6s;
     }
 
     :deep(.App-map-area-ring) {
-      width: 56px;
-      height: 56px;
+      width: calc(84 * var(--u));
+      height: calc(84 * var(--u));
     }
 
     :deep(.App-map-area-icon) {
-      width: 28px;
-      height: 28px;
+      width: calc(42 * var(--u));
+      height: calc(42 * var(--u));
     }
 
     :deep(.App-map-area-title) {
@@ -444,7 +466,7 @@ $settle-delay: 0.6s;
       top: 50%;
       left: 50%;
       transform: translate(-50%, 0);
-      margin-top: 34px;
+      margin-top: calc(48 * var(--u));
       font-family: 'HyliaSerif', serif;
       font-size: 1em;
       white-space: nowrap;
