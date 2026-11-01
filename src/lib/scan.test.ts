@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   coverMap,
+  createFailureCounter,
   createTracker,
   homographyMatrix3d,
   mapQuad,
@@ -100,6 +101,37 @@ describe('quadArea / pickDetection', () => {
     const far = detection('far', square(0, 0, 10))
     expect(pickDetection([far, near])).toBe(near)
     expect(pickDetection([])).toBeNull()
+  })
+
+  it('keeps following the current code while it is in view, even when another one is larger', () => {
+    const a = detection('a', square(0, 0, 20))
+    const b = detection('b', square(0, 0, 21))
+    expect(pickDetection([a, b], 'a')).toBe(a)
+    expect(pickDetection([a, b], 'b')).toBe(b)
+  })
+
+  it('falls back to the largest when the current code is gone', () => {
+    const a = detection('a', square(0, 0, 20))
+    const b = detection('b', square(0, 0, 21))
+    expect(pickDetection([a, b], 'gone')).toBe(b)
+    expect(pickDetection([a, b], null)).toBe(b)
+  })
+})
+
+describe('createFailureCounter', () => {
+  it('trips after the given number of failures in a row', () => {
+    const counter = createFailureCounter(3)
+    expect(counter.fail()).toBe(false)
+    expect(counter.fail()).toBe(false)
+    expect(counter.fail()).toBe(true)
+  })
+
+  it('starts over after a success', () => {
+    const counter = createFailureCounter(2)
+    counter.fail()
+    counter.ok()
+    expect(counter.fail()).toBe(false)
+    expect(counter.fail()).toBe(true)
   })
 })
 
@@ -243,5 +275,14 @@ describe('createTracker', () => {
     t.update(detection('a'), 0)
     t.reset()
     expect(t.step(0)).toBeNull()
+  })
+
+  it('reports the value being followed', () => {
+    const t = createTracker({ holdMs: 300 })
+    expect(t.value).toBeNull()
+    t.update(detection('a'), 0)
+    expect(t.value).toBe('a')
+    t.step(400)
+    expect(t.value).toBeNull()
   })
 })

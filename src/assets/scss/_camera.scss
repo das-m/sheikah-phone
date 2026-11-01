@@ -1,0 +1,45 @@
+// The camera stage of the camera and scanner apps: the video fills the screen under the scope overlay, and a greyed
+// camera icon takes its place when the camera does not work. Include it inside the app's root block (`.App`), it adds
+// `&-camera` (with `-icon`, `-icon--disabled`, `--disabled`). Filters on the video are up to the app.
+@mixin stage {
+  &-camera {
+    position: absolute;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 10;
+
+    &-icon {
+      background: transparent url(@/assets/images/overlay/scope.png) center no-repeat;
+      position: fixed;
+      top: 0;
+      z-index: 30;
+      width: 100%;
+      height: 100%;
+      display: block;
+      opacity: 0.7;
+      pointer-events: none;
+
+      &--disabled {
+        position: absolute;
+        top: 0;
+        z-index: 0;
+        width: 100%;
+        height: 100%;
+        background: transparent center no-repeat;
+        background-size: 50%;
+        background-image: url(@/assets/images/ui/icons/camera.svg);
+        filter: grayscale(100%) brightness(-100%);
+        opacity: 0.3;
+      }
+    }
+
+    video {
+      position: relative;
+      z-index: 10;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+  }
+}

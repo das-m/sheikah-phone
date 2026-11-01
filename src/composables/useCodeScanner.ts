@@ -1,9 +1,17 @@
 import { onUnmounted, watch, type Ref } from 'vue'
 
-import { normalizeCode, type Point, type Quad, type ScanDetection } from '@/lib/scan'
+import {
+  createFailureCounter,
+  normalizeCode,
+  type Point,
+  type Quad,
+  type ScanDetection
+} from '@/lib/scan'
 
 /** The jsQR fallback is pure JS and costs real CPU: it runs at most this often. The native detector paces itself. */
 const FALLBACK_INTERVAL_MS = 150
+/** Failed frames in a row after which the native detector counts as broken. */
+const NATIVE_FAILURE_LIMIT = 3
 /** Longest edge of the frame handed to jsQR, in pixels. */
 const FALLBACK_MAX_EDGE = 640
 
@@ -60,6 +68,7 @@ export function useCodeScanner(videoEl: Ref<HTMLVideoElement | null>, active: Re
   let lastRun = -Infinity
   let detector: BarcodeDetectorLike | null = null
   let isNativeBroken = false
+  const nativeFailures = createFailureCounter(NATIVE_FAILURE_LIMIT)
   let canvas: HTMLCanvasElement | null = null
 
   function publish(detections: ScanDetection[]) {
@@ -68,7 +77,8 @@ export function useCodeScanner(videoEl: Ref<HTMLVideoElement | null>, active: Re
   }
 
   function getNativeDetector(): BarcodeDetectorLike | null {
-    if (detector || isNativeBroken || typeof BarcodeDetector === 'undefined') return detector
+    if (isNativeBroken || typeof BarcodeDetector === 'undefined') return null
+    if (detector) return detector
     try {
       detector = new BarcodeDetector({ formats: ['qr_code'] })
     } catch {
@@ -113,9 +123,19 @@ export function useCodeScanner(videoEl: Ref<HTMLVideoElement | null>, active: Re
     return [{ value, corners }]
   }
 
-  function read(video: HTMLVideoElement): Promise<ScanDetection[]> {
+  async function read(video: HTMLVideoElement): Promise<ScanDetection[]> {
     const native = getNativeDetector()
-    return native ? readNative(native, video) : readFallback(video)
+    if (!native) return readFallback(video)
+    try {
+      const detections = await readNative(native, video)
+      nativeFailures.ok()
+      return detections
+    } catch (error) {
+      // Present but not working (e.g. Android without the barcode module of Google Play services): after a few
+      // failed frames in a row the fallback takes over for good.
+      if (nativeFailures.fail()) isNativeBroken = true
+      throw error
+    }
   }
 
   function schedule() {

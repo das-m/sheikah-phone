@@ -66,7 +66,7 @@ function tick(now: number) {
     seenSeq = props.scan.seq
     // Codes that are not ours (a URL, a foreign QR) get no overlay. TODO(multi): follow every known code.
     const known = props.scan.detections.filter((d) => findTarget(d.value))
-    tracker.update(pickDetection(known), now)
+    tracker.update(pickDetection(known, tracker.value), now)
   }
   const tracked = tracker.step(now)
   const target = tracked ? findTarget(tracked.value) : null
@@ -128,6 +128,7 @@ onUnmounted(() => {
       ref="frameEl"
       class="ScanOverlay-frame"
       :class="{ 'ScanOverlay-frame--confirmed': isConfirmed }"
+      :style="{ width: `${FRAME_SIZE}px`, height: `${FRAME_SIZE}px` }"
     ></div>
     <button ref="labelEl" type="button" class="ScanOverlay-label" @click="onOpen">
       {{ name }}
@@ -149,8 +150,7 @@ onUnmounted(() => {
     position: absolute;
     top: 0;
     left: 0;
-    width: 100px; // FRAME_SIZE
-    height: 100px;
+    // width and height come from FRAME_SIZE (template), the matrix maps that box onto the code
     transform-origin: 0 0;
     visibility: hidden;
     box-sizing: border-box;

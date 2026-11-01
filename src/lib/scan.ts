@@ -75,13 +75,34 @@ export function quadArea(quad: Quad): number {
 }
 
 /**
- * The detection the scanner follows. Phase one follows a single code, the largest (= nearest).
+ * The detection the scanner follows. Phase one follows a single code: the one already followed (`current`) while it is
+ * still in view, otherwise the largest (= nearest). Without that stickiness two codes of about the same size would
+ * trade places with every reading.
  * TODO(multi): follow all of them, keyed by `value` (the id is the identity, no association needed).
  */
-export function pickDetection(detections: ScanDetection[]): ScanDetection | null {
+export function pickDetection(
+  detections: ScanDetection[],
+  current: string | null = null
+): ScanDetection | null {
+  const followed = current === null ? undefined : detections.find((d) => d.value === current)
+  if (followed) return followed
   let best: ScanDetection | null = null
   for (const d of detections) if (!best || quadArea(d.corners) > quadArea(best.corners)) best = d
   return best
+}
+
+/** Counts failures in a row: `fail()` is true once there have been `limit` of them, a success (`ok()`) starts over. */
+export function createFailureCounter(limit: number) {
+  let count = 0
+  return {
+    fail(): boolean {
+      count++
+      return count >= limit
+    },
+    ok() {
+      count = 0
+    }
+  }
 }
 
 /**
@@ -171,6 +192,10 @@ export function createTracker(options: Partial<TrackerOptions> = {}) {
   }
 
   return {
+    /** The value of the code being followed, null when none. */
+    get value(): string | null {
+      return value
+    },
     /** A reading: the code in view (`corners` in the same coordinates every time), or null when nothing was seen. */
     update(detection: ScanDetection | null, timeMs: number) {
       if (!detection) {

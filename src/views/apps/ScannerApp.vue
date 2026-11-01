@@ -20,6 +20,8 @@ const audioDetect = new Audio(soundDetect)
 
 /** How long the "unknown code" note stays after a manual entry. */
 const NOTE_MS = 2500
+/** After the modal is closed, a code confirmed within this time is the one that was just handled. */
+const QUIET_AFTER_MODAL_MS = 1500
 
 // Matches the purple tint of the image (`scanFilter`).
 useFrameGlow('var(--color-purple)')
@@ -36,6 +38,16 @@ const { modal, run, close } = useScanAction()
 // Scanning rests while the modal is open and takes up again when it is closed.
 const isScanning = computed(() => isReady.value && modal.value === null)
 const scan = useCodeScanner(videoEl, isScanning)
+
+// Scanning pauses under the modal, so a code still held in view is found again when it closes: no second chime then.
+let quietUntil = 0
+watch(modal, (content, before) => {
+  if (before && !content) quietUntil = performance.now() + QUIET_AFTER_MODAL_MS
+})
+
+function onConfirm() {
+  if (performance.now() >= quietUntil) playSound(audioDetect)
+}
 
 // Manual fallback for a damaged code or a camera that does not work.
 const isEntering = ref(false)
@@ -76,13 +88,13 @@ onUnmounted(() => {
       <BackButton />
       <div class="App-camera" v-if="!hasFailed">
         <div class="App-camera-icon"></div>
-        <video ref="videoEl" autoplay playsinline muted :style="{ filter: scanFilter.css }"></video>
-        <ScanlineOverlay class="App-scanlines" v-if="scanFilter.scanlines" />
+        <video ref="videoEl" autoplay playsinline muted :style="{ filter: scanFilter }"></video>
+        <ScanlineOverlay class="App-scanlines" />
         <ScanOverlay
           class="App-overlay"
           :video="videoEl"
           :scan="scan"
-          @confirm="playSound(audioDetect)"
+          @confirm="onConfirm"
           @open="run"
         />
       </div>
@@ -117,51 +129,15 @@ onUnmounted(() => {
 </template>
 
 <style lang="scss" scoped>
+@use '@/assets/scss/button';
+@use '@/assets/scss/camera';
+
 .App {
   width: 100%;
   height: 100%;
   position: relative;
 
-  &-camera {
-    position: absolute;
-    top: 0;
-    width: 100%;
-    height: 100%;
-    z-index: 10;
-
-    &-icon {
-      background: transparent url(@/assets/images/overlay/scope.png) center no-repeat;
-      position: fixed;
-      top: 0;
-      z-index: 30;
-      width: 100%;
-      height: 100%;
-      display: block;
-      opacity: 0.7;
-      pointer-events: none;
-
-      &--disabled {
-        position: absolute;
-        top: 0;
-        z-index: 0;
-        width: 100%;
-        height: 100%;
-        background: transparent center no-repeat;
-        background-size: 50%;
-        background-image: url(@/assets/images/ui/icons/camera.svg);
-        filter: grayscale(100%) brightness(-100%);
-        opacity: 0.3;
-      }
-    }
-
-    video {
-      position: relative;
-      z-index: 10;
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-    }
-  }
+  @include camera.stage;
 
   &-scanlines {
     z-index: 20;
@@ -221,18 +197,8 @@ onUnmounted(() => {
 
   &-button {
     padding: 0.5em 1.2em;
-    border-image: url(@/assets/images/ui/frame.svg) 10 / 20px;
-    background: rgba(0, 0, 0, 0.6);
-    color: var(--color-primary);
     font-size: 0.9em;
-    letter-spacing: 0.1em;
-    text-shadow: 0 0 8px var(--color-primary);
-    cursor: pointer;
-
-    &:hover {
-      border-image: url(@/assets/images/ui/frame-hover.svg) 10 / 20px;
-      background: rgba(0, 0, 0, 0.8);
-    }
+    @include button.framed(0.6);
   }
 }
 </style>

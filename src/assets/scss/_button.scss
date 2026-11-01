@@ -1,0 +1,15 @@
+// A button in the Sheikah frame: dark glass with the frame art as its border, and a brighter frame on hover.
+// Size and type (padding, font-size) are up to the caller. `$bg` is the opacity of the dark fill.
+@mixin framed($bg: 0.4) {
+  border-image: url(@/assets/images/ui/frame.svg) 10 / 20px;
+  background: rgba(0, 0, 0, $bg);
+  color: var(--color-primary);
+  letter-spacing: 0.1em;
+  text-shadow: 0 0 8px var(--color-primary);
+  cursor: pointer;
+
+  &:hover {
+    border-image: url(@/assets/images/ui/frame-hover.svg) 10 / 20px;
+    background: rgba(0, 0, 0, 0.8);
+  }
+}

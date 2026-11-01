@@ -27,6 +27,7 @@ const message = computed(() => {
 </template>
 
 <style lang="scss" scoped>
+@use '@/assets/scss/button';
 @use '@/assets/scss/surface';
 
 .InstallGate {
@@ -46,18 +47,8 @@ const message = computed(() => {
 
   &-button {
     padding: 1.2em 3em;
-    border-image: url(@/assets/images/ui/frame.svg) 10 / 20px;
-    background: rgba(0, 0, 0, 0.4);
-    color: var(--color-primary);
     font-size: 1.2em;
-    letter-spacing: 0.1em;
-    text-shadow: 0 0 8px var(--color-primary);
-    cursor: pointer;
-
-    &:hover {
-      border-image: url(@/assets/images/ui/frame-hover.svg) 10 / 20px;
-      background: rgba(0, 0, 0, 0.8);
-    }
+    @include button.framed;
   }
 
   &-skip {
