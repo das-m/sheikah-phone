@@ -3,7 +3,13 @@ import { onMounted, onUnmounted, ref } from 'vue'
 
 import { useFairySound } from '@/composables/useFairySound'
 import { useOrientation } from '@/composables/useOrientation'
-import { fairyPosition, project, worldToCamera } from '@/lib/fairy'
+import {
+  fairyPlaybackRate,
+  fairyPosition,
+  fairySpeed,
+  project,
+  worldToCamera
+} from '@/lib/fairy'
 import type { Vec3 } from '@/lib/gesture'
 
 /** Glow diameter as a fraction of the screen height at 1 m; it shrinks with distance. */
@@ -83,7 +89,7 @@ onMounted(() => {
     const t = (now - start) / 1000
     const position = fairyPosition(t)
     const camera = worldToCamera(position, current, angle)
-    sound.update(camera)
+    sound.update(camera, fairyPlaybackRate(fairySpeed(t)))
 
     if (now - lastSpawn >= TRAIL_SPAWN_MS) {
       lastSpawn = now

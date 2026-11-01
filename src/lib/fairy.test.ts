@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { fairyPosition, project, worldToCamera } from './fairy'
+import { fairyPlaybackRate, fairyPosition, fairySpeed, project, worldToCamera } from './fairy'
 
 // Phone held upright in portrait, back camera looking north.
 const lookingNorth = { alpha: 0, beta: 90, gamma: 0 }
@@ -36,6 +36,32 @@ describe('fairyPosition', () => {
 
   it('is deterministic', () => {
     expect(fairyPosition(12.3)).toEqual(fairyPosition(12.3))
+  })
+})
+
+describe('fairySpeed', () => {
+  it('stays between standing still and a brisk walk', () => {
+    for (let i = 0; i < 6000; i++) {
+      const speed = fairySpeed(i * 0.1)
+      expect(speed).toBeGreaterThanOrEqual(0)
+      expect(speed).toBeLessThan(2)
+    }
+  })
+
+  it('matches the distance covered', () => {
+    const a = fairyPosition(10)
+    const b = fairyPosition(10.05)
+    expect(fairySpeed(10)).toBeCloseTo(Math.hypot(b.x - a.x, b.y - a.y, b.z - a.z) / 0.05)
+  })
+})
+
+describe('fairyPlaybackRate', () => {
+  it('speeds the sound up with the flight and stays within its range', () => {
+    expect(fairyPlaybackRate(0)).toBeCloseTo(3)
+    expect(fairyPlaybackRate(1.4)).toBeCloseTo(5)
+    expect(fairyPlaybackRate(0.7)).toBeGreaterThan(fairyPlaybackRate(0.3))
+    expect(fairyPlaybackRate(5)).toBeCloseTo(5)
+    expect(fairyPlaybackRate(-1)).toBeCloseTo(3)
   })
 })
 

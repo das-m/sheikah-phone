@@ -36,6 +36,26 @@ export function fairyPosition(tSec: number): Vec3 {
   }
 }
 
+/** Her speed in m/s at `tSec`, from two nearby positions. Along her path it ranges from about 0 to 1.6, the median is about 0.5. */
+export function fairySpeed(tSec: number): number {
+  const dt = 0.05
+  const a = fairyPosition(tSec)
+  const b = fairyPosition(tSec + dt)
+  return Math.hypot(b.x - a.x, b.y - a.y, b.z - a.z) / dt
+}
+
+/** Her sound plays at this rate when she is slow and fast. The fast end is the one to tune by ear. */
+const SOUND_RATE_SLOW = 3
+const SOUND_RATE_FAST = 5
+/** Speed (m/s) at which the sound reaches its fast rate. */
+const SOUND_SPEED_FULL = 1.4
+
+/** Playback rate (pitch and tempo) for the fairy sound at a given speed: faster flight, faster and higher sound. */
+export function fairyPlaybackRate(speed: number): number {
+  const t = Math.min(Math.max(speed / SOUND_SPEED_FULL, 0), 1)
+  return SOUND_RATE_SLOW + (SOUND_RATE_FAST - SOUND_RATE_SLOW) * t
+}
+
 /**
  * Turns a world position (x east, y north, z up, the phone at the origin) into the rear camera's view:
  * x right, y up, z forward (distance in front of the camera, negative behind it).

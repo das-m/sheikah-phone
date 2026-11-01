@@ -9,6 +9,7 @@ const MASTER_GAIN = 0.7
  * Loops the fairy sound so that it comes from her. `update` takes her position in camera space
  * (x right, y up, z forward, metres): the listener is the phone itself, so it stays at the Web Audio defaults
  * (origin, facing -z) and only the source moves. Left/right works on phone speakers, front/back mostly on headphones.
+ * It also takes the playback rate, so the sound speeds up and rises with her flight.
  */
 export function useFairySound() {
   let ctx: AudioContext | null = null
@@ -58,11 +59,13 @@ export function useFairySound() {
     ctx = null
   })
 
-  function update(camera: Vec3) {
-    if (!panner) return
+  function update(camera: Vec3, playbackRate: number) {
+    if (!panner || !ctx) return
     panner.positionX.value = camera.x
     panner.positionY.value = camera.y
     panner.positionZ.value = -camera.z
+    // A short glide, so the pitch follows her speed without steps.
+    source?.playbackRate.setTargetAtTime(playbackRate, ctx.currentTime, 0.15)
   }
 
   return { update }
