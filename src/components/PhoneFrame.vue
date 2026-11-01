@@ -53,7 +53,8 @@
 
     .PhoneFrame-corners,
     .PhoneFrame-strip {
-      background-color: var(--color-primary);
+      // `--frame-glow` is set on <html> by an app that wants its own glow (`useFrameGlow`).
+      background-color: var(--frame-glow, var(--color-primary));
       transition: background-color 0.5s;
     }
 
