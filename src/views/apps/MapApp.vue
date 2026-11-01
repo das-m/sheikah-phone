@@ -5,43 +5,136 @@ import 'maplibre-gl/dist/maplibre-gl.css'
 import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?url'
 import { onMounted, onUnmounted, ref, watch } from 'vue'
 
+import markerIconArea from '@/assets/images/map/area.png'
 import BackButton from '@/components/BackButton.vue'
 import ClockWidget from '@/components/widgets/ClockWidget.vue'
 import WeatherWidget from '@/components/widgets/WeatherWidget.vue'
 import { useGeolocation } from '@/composables/useGeolocation'
 import { useHeading } from '@/composables/useHeading'
-import { pois } from '@/game/pois'
+import { areas, pois, regions } from '@/game/markers'
+import type { Area, Poi, Region, Visibility } from '@/game/markers'
+import { metersPerPixel } from '@/lib/geo'
 import type { LatLng } from '@/lib/geo'
+import { zoomOpacity } from '@/lib/zoomVisibility'
 import { zeldaStyle } from '@/map/zeldaStyle'
 
 maplibregl.setWorkerUrl(workerUrl)
 
 const ludwigsburg: LatLng = { lat: 48.897551, lng: 9.191567 }
 
+// The intro starts REVEAL_AFTER_MS after the screen delay (grid, then the user marker) and waits for the map to be
+// painted, but not longer than REVEAL_WAIT_MAX_MS (tiles may never come when offline).
+const REVEAL_AFTER_MS = 1300
+const REVEAL_WAIT_MAX_MS = 4000
+
 const { position: userPosition } = useGeolocation()
 const { heading } = useHeading()
 
+const root = ref<HTMLElement | null>(null)
 const container = ref<HTMLElement | null>(null)
+const revealed = ref(false)
 
 let map: maplibregl.Map | null = null
 let userMarker: maplibregl.Marker | null = null
 let userArrowEl: HTMLElement | null = null
+let revealTimers: number[] = []
+
+// `content` is the element that scales and fades with the zoom (MapLibre owns the transform of the marker element).
+interface ZoomMarker {
+  content: HTMLElement
+  range: Visibility
+  onZoom?: (zoom: number) => void
+}
+const zoomMarkers: ZoomMarker[] = []
 
 const toLngLat = (p: LatLng): [number, number] => [p.lng, p.lat]
 
-function createPoiMarker(poi: { title: string; icon: string }): HTMLElement {
+function addMarker(
+  position: LatLng,
+  range: Visibility,
+  content: HTMLElement,
+  onZoom?: (zoom: number) => void
+) {
+  if (!map) return
+  const element = document.createElement('div')
+  element.className = 'App-map-marker'
+  element.appendChild(content)
+  new maplibregl.Marker({ element }).setLngLat(toLngLat(position)).addTo(map)
+  zoomMarkers.push({ content, range, onZoom })
+}
+
+function createPoi(poi: Poi) {
   const el = document.createElement('img')
   el.src = poi.icon
   el.alt = poi.title
   el.title = poi.title
   el.className = 'App-map-poi'
-  return el
+  addMarker(poi.position, poi, el)
+}
+
+// The dotted outline has the real radius, so it grows with the zoom; the ring icon (with the optional icon inside
+// of it) and the title stay the same size.
+function createArea(area: Area) {
+  const el = document.createElement('div')
+  el.className = 'App-map-area'
+  const ring = document.createElement('img')
+  ring.src = markerIconArea
+  ring.alt = ''
+  ring.className = 'App-map-area-ring'
+  el.appendChild(ring)
+  if (area.icon) {
+    const icon = document.createElement('img')
+    icon.src = area.icon
+    icon.alt = ''
+    icon.className = 'App-map-area-icon'
+    el.appendChild(icon)
+  }
+  const title = document.createElement('span')
+  title.className = 'App-map-area-title'
+  title.textContent = area.title
+  el.appendChild(title)
+  addMarker(area.position, area, el, (zoom) => {
+    const size = (2 * area.radiusMeters) / metersPerPixel(area.position.lat, zoom)
+    el.style.setProperty('--size', `${size}px`)
+  })
+}
+
+function createRegion(region: Region) {
+  const el = document.createElement('div')
+  el.className = 'App-map-region'
+  const name = document.createElement('span')
+  name.className = 'App-map-region-name'
+  name.textContent = region.name
+  el.appendChild(name)
+  if (region.caption) {
+    const caption = document.createElement('span')
+    caption.className = 'App-map-region-caption'
+    caption.textContent = region.caption
+    el.appendChild(caption)
+  }
+  addMarker(region.position, region, el)
+}
+
+function updateZoomMarkers() {
+  if (!map) return
+  const zoom = map.getZoom()
+  for (const { content, range, onZoom } of zoomMarkers) {
+    const opacity = zoomOpacity(zoom, range)
+    content.style.opacity = String(opacity)
+    content.style.visibility = opacity === 0 ? 'hidden' : 'visible'
+    onZoom?.(zoom)
+  }
 }
 
 function createUserMarker(): HTMLElement {
   const el = document.createElement('div')
   el.className = 'App-map-position'
   el.style.zIndex = '10'
+  // Created after the intro (late GPS fix): appear at once.
+  if (revealed.value) el.classList.add('App-map-position--late')
+  const ping = document.createElement('div')
+  ping.className = 'App-map-position-ping'
+  el.appendChild(ping)
   // MapLibre owns the transform of the marker element, so the heading rotates a child (view cone + arrow).
   userArrowEl = document.createElement('div')
   userArrowEl.className = 'App-map-position-heading'
@@ -60,6 +153,44 @@ function applyHeading(value: number | null) {
   if (userArrowEl) userArrowEl.style.transform = `rotate(${value ?? 0}deg)`
 }
 
+// Third beat of the intro: the map is revealed by a circle growing from the user (or the map center).
+function reveal() {
+  if (!map || !root.value) return
+  const origin = map.project(toLngLat(userPosition.value ?? ludwigsburg))
+  root.value.style.setProperty('--reveal-x', `${origin.x}px`)
+  root.value.style.setProperty('--reveal-y', `${origin.y}px`)
+  revealed.value = true
+}
+
+function scheduleReveal(m: maplibregl.Map) {
+  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  // `--screen-delay` is set per transition (boot, route change, mode switch) and inherited from App.vue.
+  const screenDelay = root.value
+    ? parseFloat(getComputedStyle(root.value).getPropertyValue('--screen-delay')) || 0
+    : 0
+  const earliest = reducedMotion ? 0 : screenDelay * 1000 + REVEAL_AFTER_MS
+
+  let timerDone = false
+  let mapDone = false
+  const go = () => {
+    if (timerDone && mapDone) reveal()
+  }
+  revealTimers.push(
+    window.setTimeout(() => {
+      timerDone = true
+      go()
+    }, earliest),
+    window.setTimeout(() => {
+      mapDone = true
+      go()
+    }, earliest + REVEAL_WAIT_MAX_MS)
+  )
+  m.once('idle', () => {
+    mapDone = true
+    go()
+  })
+}
+
 onMounted(() => {
   if (!container.value) return
   map = new maplibregl.Map({
@@ -67,20 +198,27 @@ onMounted(() => {
     style: zeldaStyle,
     center: toLngLat(userPosition.value ?? ludwigsburg),
     zoom: 16,
+    minZoom: 11,
     attributionControl: { compact: true }
   })
 
-  for (const poi of pois) {
-    new maplibregl.Marker({ element: createPoiMarker(poi) })
-      .setLngLat(toLngLat(poi.position))
-      .addTo(map)
-  }
+  // Order is the stacking order: areas below the region names below the POIs.
+  areas.forEach(createArea)
+  regions.forEach(createRegion)
+  pois.forEach(createPoi)
+  updateZoomMarkers()
+  map.on('zoom', updateZoomMarkers)
 
   // A GPS fix may have arrived before the map existed.
   if (userPosition.value) updateUserMarker(userPosition.value)
+
+  scheduleReveal(map)
 })
 
 onUnmounted(() => {
+  revealTimers.forEach((timer) => window.clearTimeout(timer))
+  revealTimers = []
+  zoomMarkers.length = 0
   map?.remove()
   map = null
 })
@@ -113,11 +251,10 @@ function centerMapOnUser() {
 </script>
 
 <template>
-  <div class="App">
-    <!-- Reveal in three beats (timings in the style block): grid backdrop, grid overlay, then the map. -->
-    <div class="App-backdrop"></div>
+  <div ref="root" class="App" :class="{ 'App--revealed': revealed }">
+    <!-- Intro in four beats (timings in the style block): grid, user marker, map reveal, markers and buttons. -->
+    <div class="App-grid"></div>
     <div ref="container" class="App-map"></div>
-    <div class="App-overlay"></div>
 
     <div class="App-ui">
       <BackButton />
@@ -133,39 +270,34 @@ function centerMapOnUser() {
 </template>
 
 <style lang="scss" scoped>
-// The reveal starts once the loader is gone (--screen-delay): the grid comes up, the overlay sweeps over it,
-// the map fades in last.
+@use '@/assets/scss/surface';
+@use '@/assets/scss/widget';
+
+// The intro starts once the loader is gone (--screen-delay). Beats 1 and 2 are plain delays, the reveal (3) is
+// started from the script once the map is painted (class App--revealed); beat 4 follows inside of it.
 $grid-delay: var(--screen-delay);
-$overlay-delay: calc(var(--screen-delay) + 0.5s);
-$map-delay: calc(var(--screen-delay) + 1s);
-// Buttons and widgets settle in like the home screen does (fade 1 s, zoom-settle 1.2 s), as the map finishes.
-$ui-delay: calc(var(--screen-delay) + 1.4s);
+$user-delay: calc(var(--screen-delay) + 0.6s);
+$reveal-duration: 1.2s;
+// Markers, buttons and widgets settle in like the home screen does, as the circle is about halfway.
+$settle-delay: 0.6s;
 
 .App {
+  @include surface.surface;
+
+  --reveal-x: 50%;
+  --reveal-y: 50%;
+
   width: 100%;
   height: 100%;
   position: relative;
-  background: var(--color-base);
 
-  // 1. the grid backdrop (the end state is the plain style, the animations only start from hidden)
-  &-backdrop {
+  // 1. one grid on the swirl, centered so its tiles are symmetric. It is only there for the intro: the finished map
+  // covers it.
+  &-grid {
     position: absolute;
     inset: 0;
-    background: url(@/assets/images/map/background.jpg) repeat;
-    animation: backdrop-in 0.7s $grid-delay ease-out both;
-  }
-
-  // 2. a grid overlay sweeps out from the center, stays while the map fades in underneath, then fades away:
-  // it belongs to the transition only, the finished map has no grid on it
-  &-overlay {
-    position: absolute;
-    inset: 0;
-    z-index: 2;
-    pointer-events: none;
-    background: url(@/assets/images/map/map-grid.png) repeat;
-    background-size: calc(220 * var(--u));
-    opacity: 0;
-    animation: overlay-in 1.5s $overlay-delay ease-out both;
+    background: url(@/assets/images/map/map-grid.png) center / calc(220 * var(--u)) repeat;
+    animation: grid-in 0.7s $grid-delay ease-out both;
   }
 
   // 4. buttons and widgets, on a full-size layer so the zoom-settle pivots around the screen center
@@ -174,22 +306,39 @@ $ui-delay: calc(var(--screen-delay) + 1.4s);
     inset: 0;
     z-index: 3;
     pointer-events: none;
-    animation:
-      ui-fade 1s $ui-delay ease both,
-      ui-settle 1.2s $ui-delay ease-out both;
+    visibility: hidden;
 
     > * {
       pointer-events: auto;
     }
   }
 
-  // 3. the map itself fades in last
+  &--revealed &-ui {
+    visibility: visible;
+    animation:
+      ui-fade 1s $settle-delay ease both,
+      ui-settle 1.2s $settle-delay ease-out both;
+  }
+
+  // 3. only the canvas is clipped, the user marker lives beside it and is already there (2)
   &-map {
     position: relative;
     z-index: 1;
     width: 100%;
     height: 100%;
-    animation: map-in 0.9s $map-delay ease-out both;
+
+    :deep(.maplibregl-canvas) {
+      clip-path: circle(0 at var(--reveal-x) var(--reveal-y));
+    }
+
+    :deep(.maplibregl-control-container) {
+      opacity: 0;
+    }
+
+    // 4. POIs, areas and regions
+    :deep(.App-map-marker) {
+      opacity: 0;
+    }
 
     // elements created by MapLibre carry no scope id, hence :deep
     :deep(.App-map-position) {
@@ -208,6 +357,7 @@ $ui-delay: calc(var(--screen-delay) + 1.4s);
       inset: 0;
       background: url(@/assets/images/map/user.svg) center no-repeat;
       background-size: contain;
+      animation: user-in 0.5s $user-delay ease-out both;
     }
 
     // direction.png (110x103) is a view cone whose tip is at (88.5, 97) and whose axis leans 26.5deg to the left
@@ -226,11 +376,110 @@ $ui-delay: calc(var(--screen-delay) + 1.4s);
       transform-origin: $tip-x $tip-y;
       transform: rotate(26.5deg);
       pointer-events: none;
+      animation: fade-in 0.6s calc(var(--screen-delay) + 0.9s) ease-out both;
+    }
+
+    // a sonar ping around the user, twice, as the marker appears
+    :deep(.App-map-position-ping) {
+      position: absolute;
+      inset: 0;
+      border: 2px solid var(--color-primary);
+      border-radius: 50%;
+      pointer-events: none;
+      animation: user-ping 1.4s $user-delay ease-out 2 both;
+    }
+
+    // a late GPS fix: no intro to wait for
+    :deep(.App-map-position--late) {
+      .App-map-position-arrow,
+      .App-map-position-cone,
+      .App-map-position-ping {
+        animation-delay: 0s;
+      }
     }
 
     :deep(.App-map-poi) {
       width: 32px;
       height: 32px;
+    }
+
+    // Area: dotted outline with the real radius (--size is set from the zoom), ring icon and title in the middle.
+    :deep(.App-map-area) {
+      --size: 0px;
+
+      position: relative;
+      width: var(--size);
+      height: var(--size);
+      border: 3px dotted var(--color-secondary);
+      border-radius: 50%;
+      background: color-mix(in srgb, var(--color-secondary) 8%, transparent);
+      box-shadow:
+        0 0 12px color-mix(in srgb, var(--color-secondary) 50%, transparent),
+        inset 0 0 12px color-mix(in srgb, var(--color-secondary) 30%, transparent);
+      box-sizing: border-box;
+      pointer-events: none;
+    }
+
+    // area.png is 84x84
+    :deep(.App-map-area-ring),
+    :deep(.App-map-area-icon) {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+    }
+
+    :deep(.App-map-area-ring) {
+      width: 56px;
+      height: 56px;
+    }
+
+    :deep(.App-map-area-icon) {
+      width: 28px;
+      height: 28px;
+    }
+
+    :deep(.App-map-area-title) {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, 0);
+      margin-top: 34px;
+      font-family: 'HyliaSerif', serif;
+      font-size: 1em;
+      white-space: nowrap;
+      color: var(--color-secondary);
+      text-shadow:
+        0 0 4px var(--color-base),
+        0 0 8px var(--color-base);
+    }
+
+    // Region: a big name in the Hylia serif and a runic caption under it.
+    :deep(.App-map-region) {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.25em;
+      text-align: center;
+      white-space: nowrap;
+      pointer-events: none;
+    }
+
+    :deep(.App-map-region-name) {
+      font-family: 'HyliaSerif', serif;
+      font-size: 2.6em;
+      letter-spacing: 0.12em;
+      color: var(--color-contrast);
+      text-shadow:
+        0 0 6px var(--color-base),
+        0 0 14px var(--color-primary);
+    }
+
+    :deep(.App-map-region-caption) {
+      @include widget.label;
+
+      font-size: 1.15em;
+      text-shadow: 0 0 6px var(--color-base);
     }
 
     &-button {
@@ -301,34 +550,57 @@ $ui-delay: calc(var(--screen-delay) + 1.4s);
       gap: 0.5rem;
     }
   }
+
+  &--revealed &-map {
+    :deep(.maplibregl-canvas) {
+      animation: reveal $reveal-duration cubic-bezier(0.4, 0, 0.2, 1) both;
+    }
+
+    :deep(.maplibregl-control-container),
+    :deep(.App-map-marker) {
+      opacity: 1;
+      transition: opacity 0.8s $settle-delay ease-out;
+    }
+  }
 }
 
-@keyframes backdrop-in {
+@keyframes grid-in {
   from {
     opacity: 0;
   }
 }
 
-// The overlay is revealed by a circle growing from the center (75% reaches the corners), is fully there while
-// the map fades in underneath (it ends when the map is done), and then fades out.
-@keyframes overlay-in {
+@keyframes fade-in {
   from {
     opacity: 0;
-    clip-path: circle(0% at 50% 50%);
   }
-  30%,
-  55% {
-    opacity: 1;
+}
+
+@keyframes user-in {
+  from {
+    opacity: 0;
+    transform: scale(0.3);
+  }
+}
+
+@keyframes user-ping {
+  from {
+    opacity: 0.9;
+    transform: scale(0.3);
   }
   to {
     opacity: 0;
-    clip-path: circle(75% at 50% 50%);
+    transform: scale(2.4);
   }
 }
 
-@keyframes map-in {
+// 150vmax reaches the farthest corner from any origin on the screen.
+@keyframes reveal {
   from {
-    opacity: 0;
+    clip-path: circle(0 at var(--reveal-x) var(--reveal-y));
+  }
+  to {
+    clip-path: circle(150vmax at var(--reveal-x) var(--reveal-y));
   }
 }
 
@@ -345,11 +617,23 @@ $ui-delay: calc(var(--screen-delay) + 1.4s);
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .App-backdrop,
-  .App-overlay,
-  .App-map,
-  .App-ui {
-    animation: none;
+  .App-grid,
+  .App-ui,
+  .App-map :deep(.maplibregl-canvas),
+  .App-map :deep(.App-map-marker),
+  .App-map :deep(.App-map-position-arrow),
+  .App-map :deep(.App-map-position-cone),
+  .App-map :deep(.App-map-position-ping) {
+    animation: none !important;
+    transition: none !important;
+  }
+
+  .App-map :deep(.maplibregl-canvas) {
+    clip-path: none;
+  }
+
+  .App-map :deep(.App-map-position-ping) {
+    display: none;
   }
 }
 </style>

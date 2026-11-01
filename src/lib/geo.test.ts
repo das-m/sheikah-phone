@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { angleDifference, compassHeading, distanceMeters, normalizeDegrees } from './geo'
+import {
+  angleDifference,
+  compassHeading,
+  distanceMeters,
+  metersPerPixel,
+  normalizeDegrees
+} from './geo'
 
 const schloss = { lat: 48.899614, lng: 9.195613 }
 const favorite = { lat: 48.904458, lng: 9.196029 }
@@ -51,5 +57,16 @@ describe('compassHeading', () => {
     expect(compassHeading(270, 90, 0)).toBeCloseTo(90, 5)
     expect(compassHeading(180, 90, 0)).toBeCloseTo(180, 5)
     expect(compassHeading(90, 90, 0)).toBeCloseTo(270, 5)
+  })
+})
+
+describe('metersPerPixel', () => {
+  it('is the known ground resolution at the equator and halves per zoom level', () => {
+    expect(metersPerPixel(0, 0)).toBeCloseTo(78271.517, 2)
+    expect(metersPerPixel(0, 1)).toBeCloseTo(78271.517 / 2, 2)
+  })
+
+  it('shrinks with the latitude', () => {
+    expect(metersPerPixel(48.9, 17)).toBeCloseTo(0.3926, 3)
   })
 })

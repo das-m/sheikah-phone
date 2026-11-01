@@ -48,3 +48,8 @@ export function compassHeading(alpha: number, beta: number, gamma: number): numb
 
   return normalizeDegrees(toDeg(Math.atan2(rA, rB)))
 }
+
+/** Ground resolution in meters per CSS pixel at a latitude and MapLibre zoom (512 px tiles). */
+export function metersPerPixel(lat: number, zoom: number): number {
+  return (78271.517 * Math.cos(toRad(lat))) / 2 ** zoom
+}

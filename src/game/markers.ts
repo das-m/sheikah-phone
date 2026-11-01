@@ -10,10 +10,36 @@ import markerIconZora from '@/assets/images/map/zora.png'
 import markerIconKurhotel from '@/assets/images/map/kurhotel.png'
 import type { LatLng } from '@/lib/geo'
 
-export interface Poi {
+// Everything that is placed on the map lives in this file, the map itself (MapApp.vue) only draws it.
+// There are three kinds of markers, `minZoom` / `maxZoom` are optional on all of them (the marker fades in and out
+// around those zoom levels; the map goes from zoom 11 to street level, the city is about 15-17):
+//  - `pois`: a point with an icon.
+//  - `areas`: a larger but specific place. The dotted ring is drawn with the real `radiusMeters` and grows with the zoom.
+//  - `regions`: big labels for whole regions (fantasy names). `name` is set in the Hylia serif, `caption` below it in
+//    the Sheikah runes (the font turns normal letters into runes, so write it like a normal word).
+export interface Visibility {
+  minZoom?: number
+  maxZoom?: number
+}
+
+export interface Poi extends Visibility {
   title: string
   position: LatLng
   icon: string
+}
+
+export interface Area extends Visibility {
+  title: string
+  position: LatLng
+  radiusMeters: number
+  /** Optional small icon in the center of the ring. */
+  icon?: string
+}
+
+export interface Region extends Visibility {
+  name: string
+  caption?: string
+  position: LatLng
 }
 
 // Torhaus positions: OpenStreetMap, matching de.wikipedia "Ludwigsburger Torhäuser".
@@ -250,5 +276,53 @@ export const pois: Poi[] = [
       lng: 9.163368967922386
     },
     icon: markerIconStable
+  }
+]
+
+// SAMPLES: placeholder names, positions and radii, to be replaced with the real hunt areas.
+export const areas: Area[] = [
+  {
+    title: 'Blühendes Barock',
+    position: { lat: 48.9015, lng: 9.187 },
+    radiusMeters: 250,
+    minZoom: 13,
+    maxZoom: 18
+  },
+  {
+    title: 'Favoritepark',
+    position: { lat: 48.9045, lng: 9.196 },
+    radiusMeters: 450,
+    minZoom: 13,
+    maxZoom: 18
+  },
+  {
+    title: 'Seeschloss Monrepos',
+    position: { lat: 48.9106, lng: 9.1772 },
+    radiusMeters: 350,
+    icon: markerIconCastle,
+    minZoom: 13,
+    maxZoom: 18
+  }
+]
+
+// SAMPLES: fantasy names for the regions of the hunt. They fade out when zooming in towards street level.
+export const regions: Region[] = [
+  {
+    name: 'Hyrule-Ebene',
+    caption: 'Ludwigsburg',
+    position: { lat: 48.8905, lng: 9.1925 },
+    maxZoom: 15
+  },
+  {
+    name: 'Wald von Favorite',
+    caption: 'Favoritepark',
+    position: { lat: 48.9085, lng: 9.1965 },
+    maxZoom: 15
+  },
+  {
+    name: 'Zora-Tal',
+    caption: 'Neckar',
+    position: { lat: 48.9, lng: 9.2275 },
+    maxZoom: 15
   }
 ]
