@@ -2,6 +2,7 @@
 import { ref, watch } from 'vue'
 
 import BackButton from '@/components/BackButton.vue'
+import FairyOverlay from '@/components/FairyOverlay.vue'
 import { useCamera } from '@/composables/useCamera'
 import { playSound } from '@/lib/audio'
 
@@ -23,6 +24,7 @@ watch(hasFailed, (failed) => {
       <div class="App-camera" v-if="!hasFailed">
         <div class="App-camera-icon"></div>
         <video ref="videoEl" autoplay playsinline muted></video>
+        <FairyOverlay />
       </div>
       <div class="App-camera App-camera--disabled" v-else>
         <div class="App-camera-icon App-camera-icon--disabled"></div>
