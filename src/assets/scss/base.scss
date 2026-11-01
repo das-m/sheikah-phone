@@ -8,6 +8,18 @@
   font-weight: normal;
 }
 
+// The app is one fixed screen. Without this, anything wider than the viewport makes Android Chrome shrink the
+// whole page to fit it (tiny text, shifted layout).
+html,
+body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  overscroll-behavior: none;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
 body {
   min-height: 100vh;
   color: var(--color-contrast);
@@ -29,8 +41,10 @@ a {
 
 #app {
   position: relative;
+  // `vh` is the tallest viewport on Android (URL bar hidden), `vw` includes scrollbars: use the real size.
   height: 100vh;
-  width: 100vw;
+  height: 100dvh;
+  width: 100%;
   overflow: hidden;
   font-family: 'OpenSans', sans-serif;
 }
