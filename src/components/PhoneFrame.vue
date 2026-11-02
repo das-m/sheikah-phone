@@ -1,7 +1,10 @@
 <script setup lang="ts">
-// `on`: the frame is drawn in. It stays dark until then (the boot screen is black) and draws in once, when this
-// turns true: the stone first (corners flare up, strips open from the middle), the glow lights up after it.
+// `on`: the frame is built. It stays dark until then (the boot screen is black) and comes together once, when this
+// turns true: the four stone corners slide in from their edges and settle, the strips (the patterns, not animated)
+// show as the stones are seated, and the glow lights up after it.
 defineProps<{ on?: boolean }>()
+
+const corners = ['tl', 'tr', 'br', 'bl']
 </script>
 
 <template>
@@ -12,7 +15,11 @@ defineProps<{ on?: boolean }>()
       :key="set"
       :class="['PhoneFrame-layer', `PhoneFrame-layer--${set}`]"
     >
-      <div class="PhoneFrame-corners"></div>
+      <div
+        v-for="corner in corners"
+        :key="corner"
+        :class="['PhoneFrame-corner', `PhoneFrame-corner--${corner}`]"
+      ></div>
       <div class="PhoneFrame-strip PhoneFrame-strip--top"></div>
       <div class="PhoneFrame-strip PhoneFrame-strip--bottom"></div>
     </div>
@@ -34,14 +41,42 @@ defineProps<{ on?: boolean }>()
     inset: 0;
   }
 
-  &-corners {
-    position: absolute;
-    inset: 0;
+  // Which way each stone comes from (in its own sizes: -1 is one width / height to the left / above).
+  &-corner--tl {
+    --from-x: -1;
+    --from-y: -1;
+  }
+
+  &-corner--tr {
+    --from-x: 1;
+    --from-y: -1;
+  }
+
+  &-corner--br {
+    --from-x: 1;
+    --from-y: 1;
+  }
+
+  &-corner--bl {
+    --from-x: -1;
+    --from-y: 1;
   }
 
   &-layer--stone {
-    .PhoneFrame-corners {
-      @include frame.corners('stone');
+    .PhoneFrame-corner--tl {
+      @include frame.corner('corner-tl', 'stone');
+    }
+
+    .PhoneFrame-corner--tr {
+      @include frame.corner('corner-tr', 'stone');
+    }
+
+    .PhoneFrame-corner--br {
+      @include frame.corner('corner-br', 'stone');
+    }
+
+    .PhoneFrame-corner--bl {
+      @include frame.corner('corner-bl', 'stone');
     }
 
     .PhoneFrame-strip--top {
@@ -57,15 +92,27 @@ defineProps<{ on?: boolean }>()
     // One opacity animation on the whole layer: cheap, and all glow pieces breathe in sync.
     animation: glow-breathe 4.5s ease-in-out infinite;
 
-    .PhoneFrame-corners,
+    .PhoneFrame-corner,
     .PhoneFrame-strip {
       // `--frame-glow` is set on <html> by an app that wants its own glow (`useFrameGlow`).
       background-color: var(--frame-glow, var(--color-primary));
       transition: background-color 0.5s;
     }
 
-    .PhoneFrame-corners {
-      @include frame.corners('glow', $mask: true);
+    .PhoneFrame-corner--tl {
+      @include frame.corner('corner-tl', 'glow', $mask: true);
+    }
+
+    .PhoneFrame-corner--tr {
+      @include frame.corner('corner-tr', 'glow', $mask: true);
+    }
+
+    .PhoneFrame-corner--br {
+      @include frame.corner('corner-br', 'glow', $mask: true);
+    }
+
+    .PhoneFrame-corner--bl {
+      @include frame.corner('corner-bl', 'glow', $mask: true);
     }
 
     .PhoneFrame-strip--top {
@@ -78,9 +125,9 @@ defineProps<{ on?: boolean }>()
   }
 }
 
-// Draw-in (the layers' own animations stay free for the glow's breathing). Without `--on` everything is dark.
+// Build-up (the layers' own animations stay free for the glow's breathing). Without `--on` everything is dark.
 .PhoneFrame:not(.PhoneFrame--on) {
-  .PhoneFrame-corners,
+  .PhoneFrame-corner,
   .PhoneFrame-strip {
     opacity: 0;
   }
@@ -88,46 +135,46 @@ defineProps<{ on?: boolean }>()
 
 .PhoneFrame--on {
   .PhoneFrame-layer--stone {
-    .PhoneFrame-corners {
-      animation: frame-corners-in 1.8s ease-out both;
+    // Heavy stones: they slide in and settle without a bounce.
+    .PhoneFrame-corner {
+      animation: frame-stone-in 1.5s cubic-bezier(0.22, 1, 0.36, 1) both;
     }
 
+    // The patterns do not move: they show when the stones are seated.
     .PhoneFrame-strip {
-      animation: frame-strip-in 2s 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+      animation: frame-show 0.01s 1.4s both;
     }
   }
 
   // The glow lights up last, like a tube: uneven bursts that settle at full strength.
   .PhoneFrame-layer--glow {
-    .PhoneFrame-corners,
+    .PhoneFrame-corner,
     .PhoneFrame-strip {
       animation: frame-glow-in 1.6s 1.6s linear both;
     }
   }
 }
 
-@keyframes frame-corners-in {
+@keyframes frame-stone-in {
   from {
     opacity: 0;
-    filter: brightness(3);
+    transform: translate(calc(var(--from-x) * 100%), calc(var(--from-y) * 100%));
+  }
+  15% {
+    opacity: 1;
   }
   to {
     opacity: 1;
-    filter: brightness(1);
+    transform: none;
   }
 }
 
-@keyframes frame-strip-in {
+@keyframes frame-show {
   from {
     opacity: 0;
-    clip-path: inset(0 50% 0 50%);
-  }
-  30% {
-    opacity: 1;
   }
   to {
     opacity: 1;
-    clip-path: inset(0);
   }
 }
 
@@ -176,7 +223,7 @@ defineProps<{ on?: boolean }>()
   }
 
   .PhoneFrame--on {
-    .PhoneFrame-corners,
+    .PhoneFrame-corner,
     .PhoneFrame-strip {
       animation: none;
     }

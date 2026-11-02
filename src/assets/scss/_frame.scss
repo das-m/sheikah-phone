@@ -97,21 +97,19 @@ $bottom-height: 118;
   }
 }
 
-// The four corners of a set, on a full-screen element.
-@mixin corners($set, $mask: false) {
-  $images: ();
-  $positions: ();
-  $sizes: ();
-  $repeats: ();
+// One corner of a set, on its own element (so the boot can move each stone into place). The element is the
+// size of the art and sits in its corner.
+@mixin corner($name, $set, $mask: false) {
+  $piece: map.get($corners, $name);
+  $pos: map.get($piece, pos);
 
-  @each $name, $piece in $corners {
-    $images: list.append($images, image($set, $name), comma);
-    $positions: list.append($positions, map.get($piece, pos), comma);
-    $sizes: list.append($sizes, u(map.get($piece, w)) u(map.get($piece, h)), comma);
-    $repeats: list.append($repeats, no-repeat, comma);
-  }
+  position: absolute;
+  #{list.nth($pos, 1)}: 0;
+  #{list.nth($pos, 2)}: 0;
+  width: u(map.get($piece, w));
+  height: u(map.get($piece, h));
 
-  @include paint($mask, $images, $positions, $sizes, $repeats);
+  @include paint($mask, image($set, $name), center, 100% 100%, no-repeat);
 }
 
 // The strip of one edge (`top` / `bottom`): its box between the two corners, and the repeated art in it.
