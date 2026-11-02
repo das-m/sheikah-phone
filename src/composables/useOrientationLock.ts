@@ -1,7 +1,9 @@
 import { onMounted, onUnmounted } from 'vue'
 
 // `lock` is missing from some versions of the DOM typings.
-type LockableOrientation = ScreenOrientation & { lock?: (orientation: 'landscape') => Promise<void> }
+type LockableOrientation = ScreenOrientation & {
+  lock?: (orientation: 'landscape') => Promise<void>
+}
 
 /**
  * Locks the screen to landscape. The manifest already asks for it, but an app installed with an older manifest
