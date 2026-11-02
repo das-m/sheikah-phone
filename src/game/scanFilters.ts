@@ -10,4 +10,4 @@ export const scanFilter =
  * `lib/lens.ts`): the camera is not in the middle of the phone, so an object held in front of the phone's middle is
  * not in the middle of the image. A first guess: tune it on a real phone (0 = centered on the screen).
  */
-export const LENS_SHIFT = 0.08
+export const LENS_SHIFT = 0.13

@@ -17,7 +17,7 @@ import {
 /** Size of the frame element in CSS px, before the matrix maps it onto the code. */
 const FRAME_SIZE = 100
 /** How long a recognised code must be held in view before it opens by itself (the lens ring fills up meanwhile). */
-const HOLD_MS = 1000
+const HOLD_MS = 3000
 
 const props = defineProps<{
   video: HTMLVideoElement | null
@@ -47,15 +47,19 @@ const isConfirmed = ref(false)
 const tracker = createTracker()
 let seenSeq = -1
 let frame = 0
-// A code that opened by itself does not open again until it was out of view: scanning rests under the modal, so a
-// code still held when it closes would otherwise open it over and over.
+// A code that opened does not open again until it was out of view: scanning rests under the modal, so a code still
+// held when it closes would otherwise open it over and over. A different code is not that code: it opens normally.
 let isArmed = true
+let openedValue: string | null = null
 
 // The modal opened (by the hold, or by a tap on the name): the code still in view must not open it again afterwards.
 watch(
   () => props.paused,
   (paused) => {
-    if (paused) isArmed = false
+    if (paused) {
+      isArmed = false
+      openedValue = tracker.value
+    }
   }
 )
 
@@ -109,8 +113,8 @@ function tick(now: number) {
         (!lens || isInsideCircle(quadCenter(mapQuad(d.corners, lens.map)), lens.circle))
     )
     tracker.update(pickDetection(known, tracker.value), now)
-    // A reading without any of our codes: the last one that opened is gone, the next one may open again.
-    if (known.length === 0 && !props.paused) isArmed = true
+    // The code that opened is out of view (alone, or replaced by another): the next one may open.
+    if (!props.paused && !known.some((d) => d.value === openedValue)) isArmed = true
   }
   const tracked = tracker.step(now, aroundCode.width)
   const target = tracked ? findTarget(tracked.value) : null
@@ -181,8 +185,8 @@ onUnmounted(() => {
     transform-origin: 0 0;
     visibility: hidden;
     box-sizing: border-box;
-    border: 2px solid color-mix(in srgb, var(--color-primary) 55%, transparent);
-    box-shadow: 0 0 10px color-mix(in srgb, var(--color-primary) 40%, transparent);
+    border: 2px solid color-mix(in srgb, var(--color-secondary) 55%, transparent);
+    box-shadow: 0 0 10px color-mix(in srgb, var(--color-secondary) 40%, transparent);
     opacity: 0.7;
     transition:
       opacity 0.2s,
@@ -191,10 +195,10 @@ onUnmounted(() => {
 
     // Recognised: the same square, brighter. The progress is shown by the lens ring.
     &--confirmed {
-      border-color: var(--color-primary);
+      border-color: var(--color-secondary);
       box-shadow:
-        0 0 14px var(--color-primary),
-        inset 0 0 14px color-mix(in srgb, var(--color-primary) 50%, transparent);
+        0 0 14px var(--color-secondary),
+        inset 0 0 14px color-mix(in srgb, var(--color-secondary) 50%, transparent);
       opacity: 1;
       animation: pulse 1.6s ease-in-out infinite;
     }

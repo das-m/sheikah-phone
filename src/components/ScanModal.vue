@@ -12,7 +12,7 @@ const locations = computed(() => props.content?.locations?.split('\n').filter(Bo
 </script>
 
 <template>
-  <Transition name="fade">
+  <Transition name="modal">
     <div class="ScanModal" v-if="content" @click.self="emit('close')">
       <div class="ScanModal-panel" role="dialog" aria-modal="true" :aria-label="content.title">
         <!-- The entry, like the compendium: title and picture left, the texts right. -->
@@ -45,9 +45,9 @@ const locations = computed(() => props.content?.locations?.split('\n').filter(Bo
               v-if="content.selectable"
               @click="emit('select')"
             >
-              Auswählen
+              Als Sensor Ziel wählen
             </button>
-            <button type="button" class="ScanModal-button" @click="emit('close')">Zurück</button>
+            <button type="button" class="ScanModal-button" @click="emit('close')">Abbrechen</button>
           </div>
         </div>
       </div>
@@ -56,8 +56,6 @@ const locations = computed(() => props.content?.locations?.split('\n').filter(Bo
 </template>
 
 <style lang="scss" scoped>
-@use '@/assets/scss/button';
-
 .ScanModal {
   position: fixed;
   z-index: 100;
@@ -156,16 +154,107 @@ const locations = computed(() => props.content?.locations?.split('\n').filter(Bo
 
   &-buttons {
     display: flex;
-    flex-wrap: wrap;
-    gap: 1rem;
+    flex-direction: column;
+    gap: 0.8rem;
+    max-width: 22rem;
     margin-top: 1.5em;
   }
 
+  // A flat stone-grey plate with a thin edge; pressed or focused it turns near-black with a glowing cream edge and
+  // cut corners. The shape is two stacked layers (edge, then fill 2 px smaller), so the glow (a drop-shadow on the
+  // button) follows the cut corners; `clip-path` on the button itself would cut the glow off.
   &-button {
-    padding: 0.6em 2em;
-    font-size: 1em;
-    font-style: normal;
-    @include button.framed;
+    --cut: 0.6rem;
+    --edge: 2px;
+
+    position: relative;
+    isolation: isolate;
+    padding: 0.7em 1.5em;
+    border: 0;
+    background: none;
+    color: var(--color-contrast);
+    font-family: OpenSans, sans-serif;
+    font-style: italic;
+    font-weight: 600;
+    font-size: 1.15em;
+    text-shadow: none;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    transition: filter 0.15s;
+
+    &::before,
+    &::after {
+      content: '';
+      position: absolute;
+      z-index: -1;
+      border-radius: 0.3rem;
+    }
+
+    &::before {
+      inset: 0;
+      background: rgba(226, 222, 211, 0.22);
+    }
+
+    &::after {
+      inset: 1px;
+      background: #2a2a26;
+    }
+
+    &:hover,
+    &:active,
+    &:focus-visible {
+      outline: none;
+      filter: drop-shadow(0 0 0.35rem rgba(240, 232, 200, 0.7));
+
+      &::before,
+      &::after {
+        border-radius: 0;
+      }
+
+      &::before {
+        background: #efe8cc;
+        clip-path: polygon(
+          var(--cut) 0,
+          calc(100% - var(--cut)) 0,
+          100% var(--cut),
+          100% calc(100% - var(--cut)),
+          calc(100% - var(--cut)) 100%,
+          var(--cut) 100%,
+          0 calc(100% - var(--cut)),
+          0 var(--cut)
+        );
+      }
+
+      &::after {
+        inset: var(--edge);
+        background: #0f0f0b;
+        clip-path: polygon(
+          calc(var(--cut) - var(--edge) * 0.4) 0,
+          calc(100% - var(--cut) + var(--edge) * 0.4) 0,
+          100% calc(var(--cut) - var(--edge) * 0.4),
+          100% calc(100% - var(--cut) + var(--edge) * 0.4),
+          calc(100% - var(--cut) + var(--edge) * 0.4) 100%,
+          calc(var(--cut) - var(--edge) * 0.4) 100%,
+          0 calc(100% - var(--cut) + var(--edge) * 0.4),
+          0 calc(var(--cut) - var(--edge) * 0.4)
+        );
+      }
+    }
   }
+}
+
+// Its own short fade: the global `fade` waits for the loader (`--screen-delay`), which would leave the modal invisible
+// for seconds after the hold completes.
+.modal-enter-active {
+  transition: opacity 0.25s ease;
+}
+
+.modal-leave-active {
+  transition: opacity 0.2s ease;
+}
+
+.modal-enter-from,
+.modal-leave-to {
+  opacity: 0;
 }
 </style>

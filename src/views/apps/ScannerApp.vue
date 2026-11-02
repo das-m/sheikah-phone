@@ -17,7 +17,7 @@ import { playSound } from '@/lib/audio'
 import { lensOffset } from '@/lib/lens'
 
 import soundSystemError from '@/assets/audio/error.ogg'
-import soundDetect from '@/assets/audio/camera-detect.ogg'
+import soundDetect from '@/assets/audio/lens-detect.ogg'
 import soundSensorActivate from '@/assets/audio/sensor-activate.ogg'
 import soundSensorError from '@/assets/audio/sensor-error.ogg'
 const audioSystemError = new Audio(soundSystemError)
@@ -218,14 +218,14 @@ onUnmounted(() => {
     max-width: calc((100vw - var(--lens-d)) / 2 - 1.5rem);
     padding: 0.4em 0.2em;
     border: 0;
-    border-bottom: 2px solid var(--color-primary);
+    border-bottom: 2px solid var(--color-secondary);
     background: rgba(0, 0, 0, 0.55);
-    color: var(--color-primary);
+    color: var(--color-secondary);
     font-family: OpenSans, sans-serif;
     font-style: italic;
     font-size: 1.1em;
     text-align: right;
-    text-shadow: 0 0 8px var(--color-primary);
+    text-shadow: 0 0 8px var(--color-secondary);
     cursor: pointer;
     -webkit-tap-highlight-color: transparent;
 

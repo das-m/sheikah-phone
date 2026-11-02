@@ -45,8 +45,8 @@ watch(
     // Leaving an app plays its loader too, so the lens closes in purple as well.
     loaderVariant.value = loaderVariantFor(route.path) || loaderVariantFor(oldPath)
     show()
-    if (route.name == 'home') playClose(mode.value)
-    else playOpen(mode.value)
+    if (route.name == 'home') playClose(mode.value, loaderVariant.value)
+    else playOpen(mode.value, loaderVariant.value)
   }
 )
 

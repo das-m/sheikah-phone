@@ -33,7 +33,7 @@ defineProps<{ paused?: boolean; detected?: boolean }>()
   pointer-events: none;
 
   &--detected {
-    --rim-color: var(--color-primary);
+    --rim-color: var(--color-secondary);
   }
 
   &-ring {
@@ -82,7 +82,7 @@ defineProps<{ paused?: boolean; detected?: boolean }>()
 
     &-arc {
       fill: none;
-      stroke: color-mix(in srgb, var(--rim-color) 60%, white);
+      stroke: var(--rim-color);
       stroke-width: 2.4;
       // butt caps: a round one would leave a dot at the start while the progress is 0
       stroke-linecap: butt;
