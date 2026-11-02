@@ -2,7 +2,7 @@
 
 /*
   Scale unit of the decorative art (frame, swirl tile): 1 source pixel of the 1920x1080 frame art.
-  Width-bound on portrait phones, height-bound on landscape and desktop, clamped at both ends.
+  Height-bound (the app is landscape only), clamped at both ends.
 */
 :root {
   // How long a new screen waits before it fades in, after a route change: the loader plays alone first and is
@@ -18,8 +18,6 @@
   --frame-corner-tl: #{frame.corner-w('corner-tl')};
   --frame-corner-tr: #{frame.corner-w('corner-tr')};
   --frame-corner-br: #{frame.corner-w('corner-br')};
-  // the lower end of the top corners (the right one is the taller)
-  --frame-corner-top-h: #{frame.corner-h('corner-tr')};
 }
 
 :root {

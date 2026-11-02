@@ -2,8 +2,6 @@ import { computed, onMounted, onUnmounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 
 import {
-  BOOT_TIMING,
-  BOOT_TIMING_REDUCED,
   isBootDone,
   isFrameDue,
   isLogoDue,
@@ -16,13 +14,9 @@ import { createPreloadTasks, preloadCritical, runPreload } from '@/lib/preload'
 
 /**
  * Drives the boot screen: a clock for the show (black, then the frame, then the screen, then the logo) and the real preloading
- * it waits for. Stops its frame loop on unmount, and when the boot is done or skipped.
+ * it waits for. Stops its frame loop on unmount, and when the boot is done.
  */
 export function useBoot() {
-  const timing = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-    ? BOOT_TIMING_REDUCED
-    : BOOT_TIMING
-
   const tasks = createPreloadTasks(useRouter())
   const groups = reactive<Record<PreloadGroup, GroupProgress>>({
     fonts: { done: 0, total: 0 },
@@ -50,20 +44,20 @@ export function useBoot() {
   function tick(now: number) {
     elapsed.value = Math.max(0, now - startedAt)
 
-    if (frameAt === null && isFrameDue(elapsed.value, isArtReady, timing)) {
+    if (frameAt === null && isFrameDue(elapsed.value, isArtReady)) {
       frameAt = elapsed.value
       isFrameOn.value = true
     }
-    if (screenAt === null && isScreenDue(elapsed.value, frameAt, timing)) {
+    if (screenAt === null && isScreenDue(elapsed.value, frameAt)) {
       screenAt = elapsed.value
       isScreenOn.value = true
     }
-    if (logoAt === null && isLogoDue(elapsed.value, screenAt, timing)) {
+    if (logoAt === null && isLogoDue(elapsed.value, screenAt)) {
       logoAt = elapsed.value
       isLogoOn.value = true
     }
 
-    if (isBootDone(elapsed.value, logoAt, work.value, timing)) {
+    if (isBootDone(elapsed.value, logoAt, work.value)) {
       isLogoOn.value = false
       isScreenOn.value = true
       isFrameOn.value = true
@@ -71,16 +65,6 @@ export function useBoot() {
       return
     }
     frame = requestAnimationFrame(tick)
-  }
-
-  /** Ends the show early. The preloading goes on in the background. */
-  function skip() {
-    if (isFinished.value || elapsed.value < timing.skipAfterMs) return
-    cancelAnimationFrame(frame)
-    isLogoOn.value = false
-    isScreenOn.value = true
-    isFrameOn.value = true
-    isFinished.value = true
   }
 
   onMounted(() => {
@@ -92,5 +76,5 @@ export function useBoot() {
 
   onUnmounted(() => cancelAnimationFrame(frame))
 
-  return { isLogoOn, isScreenOn, isFrameOn, isFinished, skip }
+  return { isLogoOn, isScreenOn, isFrameOn, isFinished }
 }

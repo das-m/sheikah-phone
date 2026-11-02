@@ -488,34 +488,4 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
     opacity: 0;
   }
 }
-
-@media (prefers-reduced-motion: reduce) {
-  .SheikahLoader--hack,
-  .SheikahLoader--hack .SheikahLoader-logo,
-  .SheikahLoader--hack .SheikahLoader-scan {
-    animation: none;
-  }
-
-  .SheikahLoader--hack::before {
-    animation: none;
-  }
-
-  .SheikahLoader--lens.loader-enter-active .SheikahLoader-logo-ring {
-    animation: none;
-  }
-
-  .loader-enter-active,
-  .loader-leave-active {
-    &,
-    .SheikahLoader-logo-layer {
-      animation: none;
-      transition: opacity 0.3s;
-    }
-  }
-
-  .loader-enter-from,
-  .loader-leave-to {
-    opacity: 0;
-  }
-}
 </style>

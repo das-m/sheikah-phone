@@ -323,10 +323,4 @@ onUnmounted(() => {
 .detected-leave-to {
   opacity: 0;
 }
-
-@media (prefers-reduced-motion: reduce) {
-  .App-camera {
-    animation: none;
-  }
-}
 </style>

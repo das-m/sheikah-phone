@@ -202,12 +202,11 @@ function reveal() {
 }
 
 function scheduleReveal(m: maplibregl.Map) {
-  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
   // `--screen-delay` is set per transition (boot, route change, mode switch) and inherited from App.vue.
   const screenDelay = root.value
     ? parseFloat(getComputedStyle(root.value).getPropertyValue('--screen-delay')) || 0
     : 0
-  const earliest = reducedMotion ? 0 : screenDelay * 1000 + REVEAL_AFTER_MS
+  const earliest = screenDelay * 1000 + REVEAL_AFTER_MS
 
   let timerDone = false
   let mapDone = false
@@ -765,27 +764,6 @@ $settle-delay: 0.6s;
 @keyframes ui-settle {
   from {
     transform: scale(1.2);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .App-grid,
-  .App-ui,
-  .App-map :deep(.maplibregl-canvas),
-  .App-map :deep(.App-map-marker),
-  .App-map :deep(.App-map-position-arrow),
-  .App-map :deep(.App-map-position-cone),
-  .App-map :deep(.App-map-position-ping) {
-    animation: none !important;
-    transition: none !important;
-  }
-
-  .App-map :deep(.maplibregl-canvas) {
-    clip-path: none;
-  }
-
-  .App-map :deep(.App-map-position-ping) {
-    display: none;
   }
 }
 </style>

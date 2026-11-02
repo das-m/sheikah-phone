@@ -86,19 +86,13 @@ onUnmounted(() => {
 .MediaList {
   margin: 8em 0;
   padding: 0 1px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
   gap: 1em;
-
-  // Two columns on a wide screen. Cells never grow past the item width and shrink with the screen (minmax 0),
-  // so a narrow landscape phone still fits both.
-  @media (orientation: landscape) {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 388px));
-    justify-content: center;
-    align-items: start;
-  }
+  // Two columns. Cells never grow past the item width and shrink with the screen (minmax 0), so a narrow
+  // landscape phone still fits both.
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 388px));
+  justify-content: center;
+  align-items: start;
 
   &-item {
     display: block;

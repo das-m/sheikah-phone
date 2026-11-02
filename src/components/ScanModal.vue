@@ -83,10 +83,6 @@ const locations = computed(() => props.content?.locations?.split('\n').filter(Bo
     font-family: Roboto, sans-serif;
     font-style: italic;
     text-shadow: 0 0 8px color-mix(in srgb, var(--color-primary) 60%, transparent);
-
-    @media (max-aspect-ratio: 1/1) {
-      grid-template-columns: 1fr;
-    }
   }
 
   &-visual {
@@ -142,13 +138,17 @@ const locations = computed(() => props.content?.locations?.split('\n').filter(Bo
   &-location {
     margin: 0 0 1em;
     padding: 0 0.3em;
+    line-height: 1.3;
+  }
+
+  &-text {
     font-size: 0.75em;
     font-weight: 300;
-    line-height: 1.3;
   }
 
   &-location {
     margin-bottom: 0.3em;
+    font-size: 1em;
   }
 
   &-status {

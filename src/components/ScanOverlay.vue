@@ -210,10 +210,4 @@ onUnmounted(() => {
     opacity: 0.65;
   }
 }
-
-@media (prefers-reduced-motion: reduce) {
-  .ScanOverlay-frame--confirmed {
-    animation: none;
-  }
-}
 </style>

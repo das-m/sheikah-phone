@@ -133,7 +133,8 @@ const corners = ['tl', 'tr', 'br', 'bl']
   .PhoneFrame-layer--stone {
     .PhoneFrame-corner,
     .PhoneFrame-strip {
-      animation: frame-stone-in 1.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+      // `backwards`: the end state is the plain style, so no finished animation stays on the pieces.
+      animation: frame-stone-in 1.5s cubic-bezier(0.22, 1, 0.36, 1) backwards;
     }
   }
 
@@ -192,20 +193,6 @@ const corners = ['tl', 'tr', 'br', 'bl']
   40%,
   50% {
     opacity: 1;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .PhoneFrame-layer--glow {
-    animation: none;
-  }
-
-  .PhoneFrame--on {
-    .PhoneFrame-layer--stone,
-    .PhoneFrame-corner,
-    .PhoneFrame-strip {
-      animation: none;
-    }
   }
 }
 </style>

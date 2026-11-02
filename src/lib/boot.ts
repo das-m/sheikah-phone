@@ -24,8 +24,6 @@ export interface BootTiming {
   minAfterLogoMs: number
   /** Latest end of the boot, whatever is still loading (it keeps loading in the background). */
   maxMs: number
-  /** From here on a tap skips the rest. */
-  skipAfterMs: number
 }
 
 export const BOOT_TIMING: BootTiming = {
@@ -34,19 +32,7 @@ export const BOOT_TIMING: BootTiming = {
   screenAfterFrameMs: 3200,
   logoAfterScreenMs: 1000,
   minAfterLogoMs: 2000,
-  maxMs: 10000,
-  skipAfterMs: 2500
-}
-
-/** For `prefers-reduced-motion`: the same steps, without the wait. */
-export const BOOT_TIMING_REDUCED: BootTiming = {
-  frameAtMs: 0,
-  frameWaitMaxMs: 1500,
-  screenAfterFrameMs: 300,
-  logoAfterScreenMs: 200,
-  minAfterLogoMs: 1000,
-  maxMs: 4000,
-  skipAfterMs: 0
+  maxMs: 10000
 }
 
 /** How much of the real work each group is worth: the images are many, the app chunks are heavy. */

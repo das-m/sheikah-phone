@@ -112,11 +112,4 @@ defineProps<{ paused?: boolean; detected?: boolean }>()
     transform: rotate(360deg);
   }
 }
-
-@media (prefers-reduced-motion: reduce) {
-  .LensRim-glow,
-  .LensRim-sweep {
-    animation: none;
-  }
-}
 </style>

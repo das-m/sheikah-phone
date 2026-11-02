@@ -49,28 +49,36 @@ function onVersionTap() {
 </template>
 
 <style lang="scss" scoped>
-// Portrait: clock on top, apps in the middle, weather at the bottom.
-// Landscape: clock and weather in the upper corners, apps below them (see the media query).
+// Clock and weather in the upper corners, apps below them.
 // The grid row of the apps takes the free space, and unlike centering it never clips when content overflows.
 .Homescreen {
   height: 100%;
-  padding: calc(var(--frame-top) + 1.5rem) 20px calc(var(--frame-bottom) + 1rem);
+  padding: calc(var(--frame-top) + 1.5rem) 0 calc(var(--frame-bottom) + 1rem);
   display: grid;
-  grid-template-columns: 1fr;
-  grid-template-rows: auto 1fr auto auto;
-  grid-template-areas: 'clock' 'apps' 'weather' 'version';
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: auto 1fr auto;
+  grid-template-areas: 'clock weather' 'apps apps' 'version version';
   justify-items: center;
   overflow-y: auto;
 
+  // Distances from the screen edge, in art units. Not equal on purpose: an optical adjustment, so the
+  // two widgets look evenly spaced beside the different corner art. Only the widgets are inset, the apps
+  // and the version stay centered on the screen.
   &-clock {
     // same size and weight as the weather, so the two line up
     --widget-clock-size: 1.55em;
     --widget-clock-weight: 400;
+    --widget-align: flex-start;
     grid-area: clock;
+    justify-self: start;
+    margin-left: calc(195 * var(--u));
   }
 
   &-weather {
+    --widget-align: flex-end;
     grid-area: weather;
+    justify-self: end;
+    margin-right: calc(220 * var(--u));
   }
 
   &-version {
@@ -143,28 +151,6 @@ function onVersionTap() {
           background-image: url(@/assets/images/ui/icons/scanner.svg);
         }
       }
-    }
-  }
-
-  @media (orientation: landscape) {
-    padding-inline: 0;
-    grid-template-columns: 1fr 1fr;
-    grid-template-rows: auto 1fr auto;
-    grid-template-areas: 'clock weather' 'apps apps' 'version version';
-
-    // Distances from the screen edge, in art units. Not equal on purpose: an optical adjustment, so the
-    // two widgets look evenly spaced beside the different corner art. Only the widgets are inset, the apps
-    // and the version stay centered on the screen.
-    &-clock {
-      --widget-align: flex-start;
-      justify-self: start;
-      margin-left: calc(195 * var(--u));
-    }
-
-    &-weather {
-      --widget-align: flex-end;
-      justify-self: end;
-      margin-right: calc(220 * var(--u));
     }
   }
 }

@@ -70,11 +70,4 @@
     opacity: 0;
   }
 }
-
-@media (prefers-reduced-motion: reduce) {
-  .ScanlineOverlay::before,
-  .ScanlineOverlay::after {
-    animation: none;
-  }
-}
 </style>

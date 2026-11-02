@@ -104,8 +104,7 @@ html .pswp {
     left: calc(50% - 25px);
   }
 
-  // At the top, beside the top corners of the frame; on a narrow portrait screen there is no room beside
-  // them, so it goes below them.
+  // At the top, beside the top corners of the frame.
   // The gradient spans the full width and fades downward, so it has no visible edges. It starts at the top of
   // the screen, under the strip of the frame (which hides it), so no bright band shows between the two. The
   // padding keeps the text below the strip and beside the corners.
@@ -125,11 +124,6 @@ html .pswp {
       transparent
     );
     pointer-events: none;
-
-    // On a narrow portrait screen there is no room beside the top corners: the text goes below them.
-    @media (orientation: portrait) {
-      padding: calc(var(--frame-corner-top-h) + 1em) 1.5em 3.5em;
-    }
 
     h2 {
       font-family: 'HyliaSerif';

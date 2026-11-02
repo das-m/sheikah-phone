@@ -16,7 +16,7 @@ const emit = defineEmits<{ frame: []; ready: []; done: [] }>()
 const LEAVE_MS = 1200
 
 const { mode } = useYigaMode()
-const { isLogoOn, isScreenOn, isFrameOn, isFinished, skip } = useBoot()
+const { isLogoOn, isScreenOn, isFrameOn, isFinished } = useBoot()
 
 // The screen starts black. The frame draws in first and its glow blinks on; then the screen turns on (the tube
 // comes up) and the logo appears on it: the one of the other transitions (same place, same enter and leave),
@@ -48,7 +48,6 @@ onUnmounted(() => clearTimeout(leaveTimer))
     :class="['Boot', { 'Boot--leaving': isLeaving }]"
     role="status"
     aria-label="Die Sheikah-Tafel startet"
-    @click="skip"
   >
     <SheikahLoader :show="isLogoOn" />
 
@@ -111,12 +110,6 @@ onUnmounted(() => clearTimeout(leaveTimer))
   }
   100% {
     opacity: 0;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .Boot--leaving {
-    animation-duration: 0.4s;
   }
 }
 </style>
