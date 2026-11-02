@@ -300,30 +300,31 @@ function centerMapOnUser() {
 
       <div class="App-map-button App-map-button--recenter" @click="centerMapOnUser"></div>
 
-      <!-- The sensor: the name of the target (or "Aus") and an icon, beside the recenter button. Not there before a
-        sensor was activated once (it would be a spoiler), then it stays: "Aus" when switched off, until another sensor
-        is activated. Dimmed when the target has no location (nothing to measure, so it is silent). Tap: switch on/off. -->
-      <button
+      <!-- The sensor: a button like the recenter one with the signal icon (an X when switched off) and, left of it, the
+        name of the target (or "Aus"). Not there before a sensor was activated once (it would be a spoiler), then it
+        stays: "Aus" when switched off, until another sensor is activated. Dimmed when the target has no location
+        (nothing to measure, so it is silent). Tap: switch on/off. -->
+      <div
         v-if="selectedSensor"
-        type="button"
         class="App-map-sensor"
-        :class="{
-          'App-map-sensor--on': activeSensor,
-          'App-map-sensor--silent': activeSensor && !activeSensor.location
-        }"
-        :aria-label="
-          activeSensor
-            ? `Sensor ${activeSensor.name} ausschalten`
-            : `Sensor ${selectedSensor.name} einschalten`
-        "
-        @click="onSensorTap"
+        :class="{ 'App-map-sensor--silent': activeSensor && !activeSensor.location }"
       >
-        <span class="App-map-sensor-text">
+        <span class="App-map-sensor-text" aria-hidden="true">
           <span class="App-map-sensor-name">{{ activeSensor ? activeSensor.name : 'Aus' }}</span>
-          <span class="App-map-sensor-label" aria-hidden="true">Sensor</span>
+          <span class="App-map-sensor-label">Sensor</span>
         </span>
-        <span class="App-map-sensor-icon" aria-hidden="true"></span>
-      </button>
+        <button
+          type="button"
+          class="App-map-button App-map-button--sensor"
+          :class="{ 'App-map-button--sensor-on': activeSensor }"
+          :aria-label="
+            activeSensor
+              ? `Sensor ${activeSensor.name} ausschalten`
+              : `Sensor ${selectedSensor.name} einschalten`
+          "
+          @click="onSensorTap"
+        ></button>
+      </div>
 
       <div class="App-map-widgets">
         <ClockWidget />
@@ -623,31 +624,43 @@ $settle-delay: 0.6s;
           background-size: 55%;
         }
       }
+
+      // the sensor button sits in the sensor row, not at the corner, and is a <button>: no default look
+      &--sensor {
+        position: relative;
+        bottom: auto;
+        right: auto;
+        flex: none;
+        padding: 0;
+        border: 0;
+        background: none;
+        -webkit-tap-highlight-color: transparent;
+
+        &:before {
+          // both icons have the same size (41 x 44.6), so one background-size
+          background-image: url(@/assets/images/map/sensor-off.svg);
+          background-size: 50%;
+        }
+      }
+
+      &--sensor-on:before {
+        background-image: url(@/assets/images/map/sensor-on.svg);
+      }
     }
 
-    // The sensor, left of the recenter button and centered on it: name in the size of the clock digits, the runic caption
-    // under it (right-aligned, like the widgets), and the icon (sensor-off.svg: an X, sensor-on.svg: the signal).
+    // The sensor row, left of the recenter button: the name in the size of the clock digits with the runic caption under
+    // it (right-aligned, like the widgets), then the sensor button.
     &-sensor {
       position: absolute;
       z-index: 100;
       bottom: calc(var(--frame-bottom) + 8px);
-      right: calc(var(--frame-corner-br) + 8px + 80px + 12px);
+      right: calc(var(--frame-corner-br) + 8px + 80px + 8px);
       height: 80px;
       display: flex;
       align-items: center;
       gap: 0.6em;
-      padding: 0;
-      border: 0;
-      background: none;
-      font: inherit;
       color: var(--color-primary);
       text-shadow: 0 0 10px var(--color-primary);
-      cursor: pointer;
-      -webkit-tap-highlight-color: transparent;
-
-      &:hover {
-        filter: brightness(1.3);
-      }
 
       &--silent {
         opacity: 0.5;
@@ -671,19 +684,6 @@ $settle-delay: 0.6s;
 
       &-label {
         @include widget.label;
-      }
-
-      &-icon {
-        flex: none;
-        // as big as the button's icon, which is in px as well
-        width: 44px;
-        height: 44px;
-        background: url(@/assets/images/map/sensor-off.svg) center / 55% no-repeat;
-      }
-
-      &--on &-icon {
-        background-image: url(@/assets/images/map/sensor-on.svg);
-        background-size: contain;
       }
     }
 
