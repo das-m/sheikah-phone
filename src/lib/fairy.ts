@@ -134,12 +134,29 @@ export function transformFromBasis({ right, up, forward }: ViewBasis): (p: Vec3)
   return (p) => ({ x: dot(right, p), y: dot(up, p), z: dot(forward, p) })
 }
 
-/** Angle in degrees between the view direction and the direction to `position`; 180 for the origin. */
-export function focusAngleDeg(forward: Vec3, position: Vec3): number {
-  const distance = Math.hypot(position.x, position.y, position.z)
-  if (distance === 0) return 180
-  const cos = dot(forward, position) / (distance * Math.hypot(forward.x, forward.y, forward.z))
-  return (Math.acos(Math.min(1, Math.max(-1, cos))) * 180) / Math.PI
+/** The tangents of the half field of view over the screen: how far `x / z` and `y / z` may go to be inside it. */
+export interface Viewport {
+  tanX: number
+  tanY: number
+}
+
+/** The viewport of a `width` x `height` screen whose vertical field of view is `vfovDeg`. */
+export function viewportTangents(
+  width: number,
+  height: number,
+  vfovDeg: number = CAMERA_VFOV_DEG
+): Viewport {
+  const tanY = Math.tan((vfovDeg * toRad) / 2)
+  return { tanX: tanY * (width / height), tanY }
+}
+
+/** Whether a camera-space point is in front of the camera and inside the central `share` (0..1) of the screen. */
+export function isOnScreen(camera: Vec3, viewport: Viewport, share = 1): boolean {
+  if (camera.z < NEAR) return false
+  return (
+    Math.abs(camera.x / camera.z) <= viewport.tanX * share &&
+    Math.abs(camera.y / camera.z) <= viewport.tanY * share
+  )
 }
 
 export interface ScreenPoint {

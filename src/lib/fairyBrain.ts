@@ -1,19 +1,23 @@
-import { FAIRY_MEAN_RADIUS, fairyPosition, focusAngleDeg } from './fairy'
-import type { ViewBasis } from './fairy'
+import { FAIRY_MEAN_RADIUS, fairyPosition, isOnScreen } from './fairy'
+import type { Viewport, ViewBasis } from './fairy'
 import { angleDifference, normalizeDegrees } from './geo'
 import type { Vec3 } from './gesture'
 
 export type FairyPhase = 'swirl' | 'escape' | 'flee' | 'hidden' | 'befriend' | 'guide'
-/** `hey`: her call. `burst`: a shower of sparkles. `move`: she is triggered and starts her next movement. */
-export type FairyEvent = 'hey' | 'burst' | 'move'
+/**
+ * `hey`: her call. `burst`: a shower of sparkles. `move`: she is triggered and starts her next movement.
+ * `hello`: first contact. `look`: she calls from her hiding place. `alarm`: she was found. `sad`: she was lost.
+ */
+export type FairyEvent = 'hey' | 'burst' | 'move' | 'hello' | 'look' | 'alarm' | 'sad'
 
 /** Tunables, see `game/fairy.ts` for what each one does. Seconds, degrees, metres. */
 export interface FairyConfig {
-  focusConeDeg: number
+  /** She is in focus while she is inside this central share (0..1) of the screen. */
+  focusScreenShare: number
   focusSeconds: number
   focusGraceSeconds: number
-  /** While she is in focus in the swirl her clock slows to this factor (0..1): she is curious and floats. */
-  swirlFocusSlowdown: number
+  /** While she is in focus she gets nervous: her position jitters by about this much (metres). */
+  nervousJitterMeters: number
   escapeSeconds: number
   escapeGraceSeconds: number
   /** In the game she hovers here in front of the player and hops sideways between the waiting times. */
@@ -39,6 +43,8 @@ export interface FairyConfig {
   hideGraceSeconds: number
   hideBobMeters: number
   hideLoudness: number
+  /** While hiding and not found she calls "look" again every this many seconds. */
+  hideLookSeconds: number
   befriendSeconds: number
   befriendEndDistance: number
   guideRadius: number
@@ -52,6 +58,8 @@ export interface BrainInput {
   /** Seconds since the last step. Clamped, so a hidden tab does not make her jump. */
   dt: number
   view: ViewBasis
+  /** The screen, as the tangents of its half field of view (`viewportTangents`): where she counts as in focus. */
+  viewport: Viewport
   /** Direction to the guide target in the fairy's frame (degrees clockwise from north), or null when unknown. */
   guideAzimuth: number | null
 }
@@ -71,8 +79,10 @@ export interface BrainOutput {
   focusProgress: number
   /** 0..1 how worked up she is: little while she floats, a lot while she plays or flies. Drives the sparkle. */
   excitement: number
-  /** Degrees between the view direction and her; she counts as in focus below `focusConeDeg`. */
-  focusAngle: number
+  /** Whether she is in focus right now (inside the central share of the screen and visible). */
+  focused: boolean
+  /** 0..1 how nervous she is: it rises while she is in focus, so the event shows in her. */
+  nervous: number
   phase: FairyPhase
   /** How often she has been found in the hide and seek so far. */
   finds: number
@@ -97,6 +107,17 @@ const lerp = (a: Vec3, b: Vec3, t: number): Vec3 => ({
 })
 const add = (a: Vec3, b: Vec3): Vec3 => ({ x: a.x + b.x, y: a.y + b.y, z: a.z + b.z })
 const scale = (a: Vec3, k: number): Vec3 => ({ x: a.x * k, y: a.y * k, z: a.z * k })
+const dot = (a: Vec3, b: Vec3) => a.x * b.x + a.y * b.y + a.z * b.z
+
+/** A fast, small shiver (9, 13 and 17 Hz mixed per axis) of at most about 1 at time `t` seconds. */
+function shiver(t: number): Vec3 {
+  const tau = 2 * Math.PI * t
+  return {
+    x: 0.6 * Math.sin(9 * tau) + 0.4 * Math.sin(17 * tau + 1),
+    y: 0.6 * Math.sin(13 * tau + 2) + 0.4 * Math.sin(9 * tau + 3),
+    z: 0.6 * Math.sin(17 * tau + 4) + 0.4 * Math.sin(13 * tau)
+  }
+}
 
 /** Degrees clockwise from north of the horizontal direction of a world vector. */
 export function azimuthDeg(v: Vec3): number {
@@ -158,14 +179,18 @@ export function befriendOffset(u: number, endDistance: number) {
 export function createFairyBrain(config: FairyConfig, rng: () => number = Math.random) {
   let phase: FairyPhase = 'swirl'
   let phaseTime = 0
-  /** Her clock for the swirl and the small bobbing; it slows down while she floats curiously, so the path stays continuous. */
+  /** Her clock for the swirl and the small bobbing. */
   let tau = 0
-  /** Factor on `tau`, eased towards `swirlFocusSlowdown` while she is in focus. */
-  let swirlSpeed = 1
+  /** Time that always runs, for the shivering. */
+  let clock = 0
   let finds = 0
   let hold = 0
   let lost = 0
   let excitement = 0.15
+  let nervous = 0
+  /** She has noticed the player (the first contact was announced). */
+  let met = false
+  let lookTimer = 0
   /** The game: where she hovers (azimuth, degrees), the running hop, the waiting time until the next one. */
   let escapeAzimuth = 0
   let hop: Hop | null = null
@@ -209,11 +234,13 @@ export function createFairyBrain(config: FairyConfig, rng: () => number = Math.r
     blendTime = 0
   }
 
+  /** The player lost her in the catch-me game: back to floating, a little sad. */
   function enterSwirl() {
     phase = 'swirl'
     phaseTime = 0
     resetHold()
     startBlend()
+    events.push('sad')
   }
 
   function enterEscape() {
@@ -257,12 +284,14 @@ export function createFairyBrain(config: FairyConfig, rng: () => number = Math.r
     }
   }
 
-  function startFlee() {
+  /** She flies up and away. After the catch-me game she calls "hey"; after a find the alarm has sounded already. */
+  function startFlee(afterFind: boolean) {
     phase = 'flee'
     phaseTime = 0
     fleeFrom = position
     resetHold()
-    events.push('hey', 'move')
+    if (!afterFind) events.push('hey')
+    events.push('move')
   }
 
   /** She appears behind the player, at the distance of the current round. */
@@ -273,10 +302,11 @@ export function createFairyBrain(config: FairyConfig, rng: () => number = Math.r
     anchor = sphericalToWorld(azimuth, elevation, radius)
     phase = 'hidden'
     phaseTime = 0
+    lookTimer = 0
     resetHold()
     blendFrom = null
     jumped = true
-    events.push('move')
+    events.push('move', 'look')
   }
 
   function startBefriend() {
@@ -298,9 +328,10 @@ export function createFairyBrain(config: FairyConfig, rng: () => number = Math.r
     phase = 'swirl'
     phaseTime = 0
     tau = 0
-    swirlSpeed = 1
     finds = 0
     excitement = 0.15
+    nervous = 0
+    met = false
     hop = null
     guideAzimuth = null
     blendFrom = null
@@ -311,12 +342,13 @@ export function createFairyBrain(config: FairyConfig, rng: () => number = Math.r
     skipRequested = false
   }
 
-  /** A find in the hide and seek: next round, or the friendship once she was found often enough. */
+  /** A find in the hide and seek (the alarm sounds): next round, or the friendship once she was found often enough. */
   function completeFind(view: ViewBasis, skipping: boolean) {
     finds += 1
+    events.push('alarm')
     if (finds >= config.hideRadii.length) startBefriend()
     else if (skipping) placeHidden(view)
-    else startFlee()
+    else startFlee(true)
   }
 
   function skipStage(view: ViewBasis) {
@@ -344,14 +376,14 @@ export function createFairyBrain(config: FairyConfig, rng: () => number = Math.r
   function excitementTarget(progress: number): number {
     switch (phase) {
       case 'swirl':
-        return 0.15 + 0.5 * progress
+        return 0.15 + 0.45 * nervous + 0.2 * progress
       case 'escape':
         return 0.8
       case 'flee':
       case 'befriend':
         return 1
       case 'hidden':
-        return 0.3 + 0.5 * progress
+        return 0.3 + 0.3 * nervous + 0.3 * progress
       case 'guide':
         return 0.4
     }
@@ -367,9 +399,16 @@ export function createFairyBrain(config: FairyConfig, rng: () => number = Math.r
     }
     phaseTime += dt
 
+    // She is in focus while she is on the screen (the camera cannot see her, so she shows it herself: `nervous`).
     const canBeFocused = phase === 'swirl' || phase === 'escape' || phase === 'hidden'
-    const focusAngle = focusAngleDeg(view.forward, position)
-    const focused = canBeFocused && alpha > 0.6 && focusAngle <= config.focusConeDeg
+    const onScreen = isOnScreen(
+      { x: dot(view.right, position), y: dot(view.up, position), z: dot(view.forward, position) },
+      input.viewport,
+      config.focusScreenShare
+    )
+    const focused = canBeFocused && alpha > 0.6 && onScreen
+    nervous += ((focused ? 1 : 0) - nervous) * Math.min(1, dt / (focused ? 0.15 : 0.4))
+    clock += dt
 
     let next: Vec3 = position
     let nextAlpha = 1
@@ -379,10 +418,12 @@ export function createFairyBrain(config: FairyConfig, rng: () => number = Math.r
 
     switch (phase) {
       case 'swirl': {
-        // Caught in the view she gets curious and floats instead of darting around.
-        const target = focused ? config.swirlFocusSlowdown : 1
-        swirlSpeed += (target - swirlSpeed) * Math.min(1, dt / 0.25)
-        tau += dt * swirlSpeed
+        tau += dt
+        // First contact: she notices that the player has her in view.
+        if (focused && !met) {
+          met = true
+          events.push('hello')
+        }
         holdStep(focused, dt, config.focusGraceSeconds)
         if (hold >= config.focusSeconds) enterEscape()
         progress = hold / config.focusSeconds
@@ -403,7 +444,7 @@ export function createFairyBrain(config: FairyConfig, rng: () => number = Math.r
         }
         const failed = holdStep(focused, dt, config.escapeGraceSeconds)
         if (failed) enterSwirl()
-        else if (hold >= config.escapeSeconds) startFlee()
+        else if (hold >= config.escapeSeconds) startFlee(false)
         progress = hold / config.escapeSeconds
         break
       }
@@ -417,6 +458,15 @@ export function createFairyBrain(config: FairyConfig, rng: () => number = Math.r
       case 'hidden': {
         tau += dt
         holdStep(focused, dt, config.hideGraceSeconds)
+        // Not found yet: she calls again now and then, so the player can find her by ear.
+        if (focused) lookTimer = 0
+        else {
+          lookTimer += dt
+          if (lookTimer >= config.hideLookSeconds) {
+            lookTimer = 0
+            events.push('look')
+          }
+        }
         if (hold >= config.hideFindSeconds) completeFind(view, false)
         progress = hold / config.hideFindSeconds
         loudness = config.hideLoudness
@@ -453,7 +503,7 @@ export function createFairyBrain(config: FairyConfig, rng: () => number = Math.r
     switch (phase) {
       case 'swirl':
         next = fairyPosition(tau)
-        glow = 1 + 0.5 * progress
+        glow = 1 + 0.45 * nervous + 0.3 * progress
         break
       case 'escape':
         // In front of the player and fixed in the world between the hops, with a little bobbing.
@@ -465,12 +515,12 @@ export function createFairyBrain(config: FairyConfig, rng: () => number = Math.r
           ),
           bob(tau, 0.04)
         )
-        glow = 1 + 0.5 * progress
+        glow = 1 + 0.45 * nervous + 0.3 * progress
         break
       case 'hidden':
         next = add(anchor, bob(tau, config.hideBobMeters))
         nextAlpha = clamp(phaseTime / config.hideFadeInSeconds, 0, 1)
-        glow = 1 + 0.5 * progress
+        glow = 1 + 0.45 * nervous + 0.3 * progress
         break
       case 'guide': {
         if (input.guideAzimuth !== null && guideAzimuth !== null) {
@@ -506,15 +556,19 @@ export function createFairyBrain(config: FairyConfig, rng: () => number = Math.r
 
     excitement += (excitementTarget(progress) - excitement) * Math.min(1, dt / 0.3)
 
+    // Nervous she shivers. Only what is drawn shivers: the story and her speed use the calm position.
+    const shake = scale(shiver(clock), nervous * config.nervousJitterMeters)
+
     return {
-      position,
+      position: add(position, shake),
       alpha,
       glow,
       loudness,
       speed,
       focusProgress: clamp(progress, 0, 1),
       excitement,
-      focusAngle,
+      focused,
+      nervous,
       phase,
       finds,
       events

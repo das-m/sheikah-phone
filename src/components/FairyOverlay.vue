@@ -10,7 +10,8 @@ import {
   fairyPlaybackRate,
   project,
   transformFromBasis,
-  viewBasis
+  viewBasis,
+  viewportTangents
 } from '@/lib/fairy'
 import { createFairyBrain } from '@/lib/fairyBrain'
 import type { BrainOutput } from '@/lib/fairyBrain'
@@ -23,7 +24,6 @@ const TRAIL_SPAWN_CALM_MS = 160
 const TRAIL_SPAWN_EXCITED_MS = 30
 const TRAIL_LIFE_CALM_MS = 600
 const TRAIL_LIFE_EXCITED_MS = 1100
-const toRad = Math.PI / 180
 /** How far (m) a trail sparkle may drift from the fairy's path when it is born. */
 const TRAIL_SPREAD = 0.05
 const BURST_COUNT = 36
@@ -136,29 +136,6 @@ onMounted(() => {
     })
   }
 
-  /** The ring around the middle of the view in which she counts as in focus; its arc fills while she is held. */
-  function drawFocusRing(progress: number) {
-    const cx = width / 2
-    const cy = height / 2
-    const radius =
-      ((height / 2) * Math.tan(fairyConfig.focusConeDeg * toRad)) /
-      Math.tan((CAMERA_VFOV_DEG * toRad) / 2)
-    g!.globalCompositeOperation = 'source-over'
-    g!.lineWidth = 2
-    g!.strokeStyle = 'rgb(255, 150, 200)'
-    g!.globalAlpha = 0.25
-    g!.beginPath()
-    g!.arc(cx, cy, radius, 0, Math.PI * 2)
-    g!.stroke()
-    if (progress > 0) {
-      g!.lineWidth = 4
-      g!.globalAlpha = 0.9
-      g!.beginPath()
-      g!.arc(cx, cy, radius, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * progress)
-      g!.stroke()
-    }
-  }
-
   function tick(now: number) {
     frame = requestAnimationFrame(tick)
     g!.globalAlpha = 1
@@ -181,23 +158,33 @@ onMounted(() => {
     const out = brain.step({
       dt,
       view: basis,
+      viewport: viewportTangents(width, height, CAMERA_VFOV_DEG),
       guideAzimuth: bearing !== null && offset !== null ? normalizeDegrees(bearing - offset) : null
     })
     const toCamera = transformFromBasis(basis)
     const camera = toCamera(out.position)
 
-    sound.update(camera, fairyPlaybackRate(out.speed))
+    // Nervous she buzzes a little faster.
+    sound.update(camera, fairyPlaybackRate(out.speed) * (1 + 0.2 * out.nervous))
     sound.setLoudness(out.loudness)
     for (const event of out.events) {
-      if (event === 'hey') sound.playHey()
-      else if (event === 'move') sound.playMove()
-      else
-        for (let i = 0; i < BURST_COUNT; i++)
+      if (event === 'burst') {
+        for (let i = 0; i < BURST_COUNT; i++) {
           addSparkle(out.position, BURST_SPREAD, now, BURST_LIFE_MS, 1)
+        }
+      } else {
+        sound.play(event)
+        // The alarm makes the find visible as well.
+        if (event === 'alarm') {
+          for (let i = 0; i < BURST_COUNT; i++) {
+            addSparkle(out.position, BURST_SPREAD, now, BURST_LIFE_MS, 1)
+          }
+        }
+      }
     }
 
-    // The angle to her is temporary, for tuning the focus ring and cone.
-    const label = `${labelFor(out)} ${Math.round(out.focusAngle)}°`
+    // Whether she is in focus is temporary, for tuning (the focus is the whole screen).
+    const label = `${labelFor(out)} ${out.focused ? '●' : '○'}`
     if (label !== shownLabel) {
       shownLabel = label
       phaseLabel.value = label
@@ -236,17 +223,15 @@ onMounted(() => {
 
     const point = project(camera, width, height)
     if (point && out.alpha > 0) {
-      // The closer she is to being caught, the faster she pulses.
-      const pulse = 1 + 0.12 * Math.sin(t * (6 + 10 * out.focusProgress))
-      drawGlow(point.x, point.y, height * GLOW_SIZE * point.scale * out.glow * pulse, out.alpha)
-    }
-
-    if (
-      out.phase === 'swirl' ||
-      out.phase === 'escape' ||
-      (out.phase === 'hidden' && out.alpha > 0.6)
-    ) {
-      drawFocusRing(out.focusProgress)
+      // She shows that something is going on: calm she pulses slowly, nervous she pulses fast and flickers.
+      const pulse = 1 + 0.12 * Math.sin(t * (6 + 16 * out.nervous))
+      const flicker = 1 - 0.15 * out.nervous * (0.5 + 0.5 * Math.sin(t * 37))
+      drawGlow(
+        point.x,
+        point.y,
+        height * GLOW_SIZE * point.scale * out.glow * pulse,
+        out.alpha * flicker
+      )
     }
   }
   frame = requestAnimationFrame(tick)

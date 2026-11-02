@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { ViewBasis } from './fairy'
-import { fairyPosition } from './fairy'
+import { viewportTangents } from './fairy'
 import {
   azimuthDeg,
   befriendOffset,
@@ -13,10 +13,10 @@ import { angleDifference } from './geo'
 import type { Vec3 } from './gesture'
 
 const config: FairyConfig = {
-  focusConeDeg: 12,
+  focusScreenShare: 0.9,
+  nervousJitterMeters: 0.07,
   focusSeconds: 5,
   focusGraceSeconds: 0.5,
-  swirlFocusSlowdown: 0.35,
   escapeSeconds: 5,
   escapeGraceSeconds: 1.5,
   escapeRadius: 1.5,
@@ -38,6 +38,7 @@ const config: FairyConfig = {
   hideGraceSeconds: 0.3,
   hideBobMeters: 0.12,
   hideLoudness: 0.45,
+  hideLookSeconds: 6,
   befriendSeconds: 5,
   befriendEndDistance: 0.8,
   guideRadius: 1.2,
@@ -48,6 +49,8 @@ const config: FairyConfig = {
 }
 
 const DT = 0.05
+/** A 2:1 screen with a vertical field of view of 50 degrees, so 43 degrees to the sides and 25 up and down. */
+const viewport = viewportTangents(1600, 800, 50)
 const length = (v: Vec3) => Math.hypot(v.x, v.y, v.z)
 const scale = (v: Vec3, k: number): Vec3 => ({ x: v.x * k, y: v.y * k, z: v.z * k })
 const dot = (a: Vec3, b: Vec3) => a.x * b.x + a.y * b.y + a.z * b.z
@@ -75,7 +78,7 @@ const fixed = (view: ViewBasis) => () => view
 
 /** Steps the brain for `seconds`, the view chosen from the last output; collects the events on the way. */
 function makeRun(brain: FairyBrain) {
-  let out = brain.step({ dt: 0, view: north, guideAzimuth: null })
+  let out = brain.step({ dt: 0, view: north, viewport, guideAzimuth: null })
   const events: FairyEvent[] = []
   return {
     get out() {
@@ -88,7 +91,7 @@ function makeRun(brain: FairyBrain) {
       guideAzimuth: number | null = null
     ) {
       for (let i = 0; i < Math.round(seconds / DT); i++) {
-        out = brain.step({ dt: DT, view: viewFor(out), guideAzimuth })
+        out = brain.step({ dt: DT, view: viewFor(out), viewport, guideAzimuth })
         events.push(...out.events)
       }
       return out
@@ -96,7 +99,7 @@ function makeRun(brain: FairyBrain) {
     skip(times = 1) {
       for (let i = 0; i < times; i++) {
         brain.skip()
-        out = brain.step({ dt: DT, view: north, guideAzimuth: null })
+        out = brain.step({ dt: DT, view: north, viewport, guideAzimuth: null })
         events.push(...out.events)
       }
       return out
@@ -171,7 +174,10 @@ describe('escape', () => {
   function watchGame(game: FairyConfig) {
     // Neither lost nor won: the grace time and the time to hold are endless.
     const r = makeRun(
-      createFairyBrain({ ...game, escapeGraceSeconds: 1e6, escapeSeconds: 1e6 }, seededRng(3))
+      createFairyBrain(
+        { ...game, escapeGraceSeconds: 1e6, escapeSeconds: 1e6, nervousJitterMeters: 0 },
+        seededRng(3)
+      )
     )
     r.run(5.2, track)
     expect(r.out.phase).toBe('escape')
@@ -273,17 +279,7 @@ describe('hopOffset', () => {
   })
 })
 
-describe('swirl curiosity and excitement', () => {
-  it('floats more slowly while she is in focus and speeds up again when she is lost', () => {
-    const r = setup()
-    r.run(3, track)
-    // The swirl clock eases to 0.35 within about a quarter second: about 1.21 s have passed on it.
-    expect(length(sub(r.out.position, fairyPosition(1.2125)))).toBeLessThan(0.05)
-    r.run(3, away)
-    // And back to 1: about 2.84 s more.
-    expect(length(sub(r.out.position, fairyPosition(1.2125 + 2.8375)))).toBeLessThan(0.1)
-  })
-
+describe('excitement', () => {
   it('is calm while floating and worked up while playing, flying and befriending', () => {
     const r = setup()
     expect(r.run(4, away).excitement).toBeLessThan(0.25)
@@ -297,11 +293,128 @@ describe('swirl curiosity and excitement', () => {
     expect(r.out.phase).toBe('guide')
     expect(Math.abs(r.run(3, fixed(north)).excitement - 0.4)).toBeLessThan(0.05)
   })
+})
 
-  it('reports the angle to her', () => {
+describe('focus on the whole screen', () => {
+  /** A view that keeps her `degrees` to the right of the middle, at her height. */
+  const beside = (degrees: number) => (out: BrainOutput) =>
+    lookAt(
+      sphericalToWorld(
+        azimuthDeg(out.position) - degrees,
+        Math.asin(out.position.z / length(out.position)),
+        1
+      )
+    )
+
+  it('counts while she is anywhere on the screen, not only in the middle', () => {
     const r = setup()
-    expect(r.run(0.5, track).focusAngle).toBeLessThan(5)
-    expect(r.run(0.5, away).focusAngle).toBeGreaterThan(170)
+    r.run(5.5, beside(25))
+    expect(r.out.phase).toBe('escape')
+  })
+
+  it('does not count when she is outside of the screen', () => {
+    const r = setup()
+    expect(r.run(10, beside(60)).phase).toBe('swirl')
+    expect(r.out.focusProgress).toBe(0)
+    expect(r.out.focused).toBe(false)
+  })
+
+  it('reports whether she is in focus', () => {
+    const r = setup()
+    expect(r.run(0.5, track).focused).toBe(true)
+    expect(r.run(0.5, away).focused).toBe(false)
+  })
+})
+
+describe('nervous', () => {
+  it('rises while she is in focus and settles when she is not', () => {
+    const r = setup()
+    expect(r.run(0.2, away).nervous).toBeLessThan(0.05)
+    expect(r.run(1, track).nervous).toBeGreaterThan(0.9)
+    expect(r.run(1.5, away).nervous).toBeLessThan(0.1)
+  })
+
+  it('makes her shiver, but only what is drawn: her speed stays that of the calm path', () => {
+    const stepLength = (view: (out: BrainOutput) => ViewBasis) => {
+      const r = setup()
+      r.run(1, view)
+      let previous = r.out.position
+      let total = 0
+      let maxSpeed = 0
+      for (let i = 0; i < 40; i++) {
+        const out = r.run(DT, view)
+        total += length(sub(out.position, previous))
+        maxSpeed = Math.max(maxSpeed, out.speed)
+        previous = out.position
+      }
+      return { average: total / 40, maxSpeed }
+    }
+    const calm = stepLength(away)
+    const nervous = stepLength(track)
+    expect(nervous.average).toBeGreaterThan(2 * calm.average)
+    expect(nervous.maxSpeed).toBeLessThan(2)
+  })
+
+  it('is more worked up and brighter while she is in focus', () => {
+    const calm = setup()
+    const caught = setup()
+    expect(caught.run(2, track).excitement).toBeGreaterThan(calm.run(2, away).excitement + 0.2)
+    expect(caught.out.glow).toBeGreaterThan(calm.out.glow)
+  })
+})
+
+describe('voices', () => {
+  it('says hello once, the first time she is in focus', () => {
+    const r = setup()
+    r.run(3, away)
+    expect(r.events).not.toContain('hello')
+    r.run(0.5, track)
+    expect(r.events.filter((e) => e === 'hello')).toHaveLength(1)
+    r.run(2, away)
+    r.run(1, track)
+    expect(r.events.filter((e) => e === 'hello')).toHaveLength(1)
+  })
+
+  it('is sad when the catch-me game is lost, and only then', () => {
+    const r = setup()
+    r.run(3, track)
+    r.run(1.5, away) // loses the swirl focus: no game yet
+    expect(r.events).not.toContain('sad')
+    r.run(5.5, track)
+    expect(r.out.phase).toBe('escape')
+    r.run(2, away)
+    expect(r.out.phase).toBe('swirl')
+    expect(r.events.filter((e) => e === 'sad')).toHaveLength(1)
+  })
+
+  it('calls "look" when she hides and again every few seconds until she is found', () => {
+    const r = setup()
+    toFirstHide(r)
+    expect(r.events.filter((e) => e === 'look')).toHaveLength(1)
+    r.run(13, fixed(north))
+    expect(r.events.filter((e) => e === 'look')).toHaveLength(3)
+  })
+
+  it('sounds the alarm at each of the three finds, and no "hey" after them', () => {
+    const r = setup()
+    toFirstHide(r)
+    r.events.length = 0
+    for (let round = 0; round < 3; round++) {
+      r.run(3, (out) => (out.phase === 'hidden' ? track(out) : north))
+      if (round < 2) r.run(1, fixed(north))
+    }
+    expect(r.out.phase).toBe('befriend')
+    expect(r.events.filter((e) => e === 'alarm')).toHaveLength(3)
+    expect(r.events).not.toContain('hey')
+  })
+
+  it('still calls "hey" when the catch-me game is won', () => {
+    const r = setup()
+    r.run(5.2, track)
+    r.events.length = 0
+    r.run(5.2, track)
+    expect(r.events).toContain('hey')
+    expect(r.events).not.toContain('alarm')
   })
 })
 
@@ -357,7 +470,7 @@ describe('hide and seek', () => {
       radii.push(length(r.out.position))
       r.events.length = 0
       r.run(3, (out) => (out.phase === 'hidden' ? track(out) : north))
-      expect(r.events).toContain('hey')
+      expect(r.events).toContain('alarm')
       expect(r.out.finds).toBe(round + 1)
       r.run(1, fixed(north))
     }
@@ -462,8 +575,8 @@ describe('skip, reset and robustness', () => {
 
   it('does not jump when the page was hidden for a long time', () => {
     const brain = createFairyBrain(config, seededRng())
-    const before = brain.step({ dt: 0, view: north, guideAzimuth: null }).position
-    const after = brain.step({ dt: 5, view: north, guideAzimuth: null }).position
+    const before = brain.step({ dt: 0, view: north, viewport, guideAzimuth: null }).position
+    const after = brain.step({ dt: 5, view: north, viewport, guideAzimuth: null }).position
     expect(
       length({ x: after.x - before.x, y: after.y - before.y, z: after.z - before.z })
     ).toBeLessThan(0.3)
@@ -474,7 +587,7 @@ describe('skip, reset and robustness', () => {
     const r = makeRun(brain)
     r.skip(3)
     brain.reset()
-    const out = brain.step({ dt: DT, view: north, guideAzimuth: null })
+    const out = brain.step({ dt: DT, view: north, viewport, guideAzimuth: null })
     expect(out.phase).toBe('swirl')
     expect(out.finds).toBe(0)
   })

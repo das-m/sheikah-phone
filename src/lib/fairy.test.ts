@@ -4,9 +4,10 @@ import {
   fairyPlaybackRate,
   fairyPosition,
   fairySpeed,
-  focusAngleDeg,
+  isOnScreen,
   project,
   viewBasis,
+  viewportTangents,
   worldToCamera
 } from './fairy'
 
@@ -149,22 +150,31 @@ describe('viewBasis', () => {
   })
 })
 
-describe('focusAngleDeg', () => {
-  const north = { x: 0, y: 1, z: 0 }
-
-  it('is 0 straight ahead, 90 to the side, 180 behind', () => {
-    expect(focusAngleDeg(north, { x: 0, y: 2, z: 0 })).toBeCloseTo(0)
-    expect(focusAngleDeg(north, { x: 2, y: 0, z: 0 })).toBeCloseTo(90)
-    expect(focusAngleDeg(north, { x: 0, y: -1, z: 0 })).toBeCloseTo(180)
+describe('viewportTangents and isOnScreen', () => {
+  it('derives the horizontal field of view from the aspect ratio', () => {
+    const { tanX, tanY } = viewportTangents(1600, 800, 60)
+    expect(tanY).toBeCloseTo(Math.tan(Math.PI / 6))
+    expect(tanX).toBeCloseTo(2 * tanY)
   })
 
-  it('is 45 diagonally and does not depend on the distance', () => {
-    expect(focusAngleDeg(north, { x: 0, y: 1, z: 1 })).toBeCloseTo(45)
-    expect(focusAngleDeg(north, { x: 0, y: 5, z: 5 })).toBeCloseTo(45)
+  const viewport = viewportTangents(1600, 800, 60)
+
+  it('is true inside the screen and false outside of it', () => {
+    expect(isOnScreen({ x: 0, y: 0, z: 2 }, viewport)).toBe(true)
+    expect(isOnScreen({ x: 1.1 * 2, y: 0, z: 2 }, viewport)).toBe(true)
+    expect(isOnScreen({ x: 1.3 * 2, y: 0, z: 2 }, viewport)).toBe(false)
+    expect(isOnScreen({ x: 0, y: 0.7 * 2, z: 2 }, viewport)).toBe(false)
   })
 
-  it('is 180 for the origin', () => {
-    expect(focusAngleDeg(north, { x: 0, y: 0, z: 0 })).toBe(180)
+  it('only counts the central share of the screen', () => {
+    const edge = { x: 1.1 * 2, y: 0, z: 2 }
+    expect(isOnScreen(edge, viewport, 0.9)).toBe(false)
+    expect(isOnScreen({ x: 0.9 * 2, y: 0, z: 2 }, viewport, 0.9)).toBe(true)
+  })
+
+  it('is false behind the camera and for the camera plane', () => {
+    expect(isOnScreen({ x: 0, y: 0, z: -1 }, viewport)).toBe(false)
+    expect(isOnScreen({ x: 0, y: 0, z: 0 }, viewport)).toBe(false)
   })
 })
 

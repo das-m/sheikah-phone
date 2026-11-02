@@ -1,10 +1,14 @@
 import { onMounted, onUnmounted } from 'vue'
 import type { Vec3 } from '@/lib/gesture'
 
-// The flying loop: the original sped up in the file (a: x4, b: x6 with a 40 Hz wing flutter, c: x8), so it sounds like
-// an insect. TODO(fairy): pick one by ear, then delete the other two files and the old fairy.ogg.
-import soundFairy from '@/assets/audio/fairy-fly-b.ogg'
+import soundFairyAlarm from '@/assets/audio/fairy-alarm-01.ogg'
+import soundFairyFloat from '@/assets/audio/fairy-float.ogg'
+import soundFairyHello from '@/assets/audio/fairy-hello.ogg'
 import soundFairyHey from '@/assets/audio/fairy-hey.ogg'
+import soundFairyLook1 from '@/assets/audio/fairy-look-01.ogg'
+import soundFairyLook2 from '@/assets/audio/fairy-look-02.ogg'
+import soundFairyLook3 from '@/assets/audio/fairy-look-03.ogg'
+import soundFairySad from '@/assets/audio/fairy-sad.ogg'
 import soundFairyMove1 from '@/assets/audio/fairy-sound-01.ogg'
 import soundFairyMove2 from '@/assets/audio/fairy-sound-02.ogg'
 import soundFairyMove3 from '@/assets/audio/fairy-sound-03.ogg'
@@ -16,7 +20,25 @@ const RATE_GLIDE_S = 0.15
 const LOUDNESS_STEP = 0.02
 const LOUDNESS_GLIDE_S = 0.25
 
-const moveUrls = [soundFairyMove1, soundFairyMove2, soundFairyMove3]
+/** Her one-shot sounds. A voice with several files plays one of them, never the same twice in a row. */
+const voiceUrls = {
+  /** The game starts and she flies away after it. */
+  hey: [soundFairyHey],
+  /** First contact. */
+  hello: [soundFairyHello],
+  /** She was found. */
+  alarm: [soundFairyAlarm],
+  /** The player lost her. */
+  sad: [soundFairySad],
+  /** She starts her next movement. */
+  move: [soundFairyMove1, soundFairyMove2, soundFairyMove3],
+  /** She calls "Look!" from her hiding place. */
+  look: [soundFairyLook1, soundFairyLook2, soundFairyLook3]
+}
+
+export type FairyVoice = keyof typeof voiceUrls
+
+const voiceNames = Object.keys(voiceUrls) as FairyVoice[]
 
 // An AudioBuffer works with any context, so each file is fetched and decoded once, not on every visit.
 const bufferPromises = new Map<string, Promise<AudioBuffer>>()
@@ -41,8 +63,8 @@ function loadBuffer(url: string): Promise<AudioBuffer> {
 }
 
 /**
- * Her chime: a looping sound that comes from her, plus one-shots (her "hey", the sounds when she starts a new movement)
- * through the same 3D panner, so they come from where she is. `update` takes her position in camera space
+ * Her sounds: a floating loop that comes from her, plus one-shot voices (`play`) through the same 3D panner, so they
+ * come from where she is. `update` takes her position in camera space
  * (x right, y up, z forward, metres): the listener is the phone itself, so it stays at the Web Audio defaults
  * (origin, facing -z) and only the source moves. Left/right works on phone speakers, front/back mostly on headphones.
  * `update` also takes the playback rate of the loop, so it speeds up and rises with her flight, and `setLoudness`
@@ -55,9 +77,8 @@ export function useFairySound() {
   let loopGain: GainNode | null = null
   let source: AudioBufferSourceNode | null = null
   let buffer: AudioBuffer | null = null
-  let heyBuffer: AudioBuffer | null = null
-  let moveBuffers: AudioBuffer[] = []
-  let lastMove = -1
+  let voices: Partial<Record<FairyVoice, AudioBuffer[]>> = {}
+  const lastIndex: Partial<Record<FairyVoice, number>> = {}
   let latestRate: number | null = null
   let glideRate = 0
   let loudness = 1
@@ -81,13 +102,6 @@ export function useFairySound() {
     source.start()
   }
 
-  function playOnce(sound: AudioBuffer | null) {
-    if (!ctx || !panner || !sound || ctx.state !== 'running') return
-    const shot = new AudioBufferSourceNode(ctx, { buffer: sound })
-    shot.connect(panner)
-    shot.start()
-  }
-
   onMounted(async () => {
     if (typeof AudioContext === 'undefined') return
     const context = new AudioContext()
@@ -109,16 +123,18 @@ export function useFairySound() {
     document.addEventListener('visibilitychange', onVisibilityChange)
 
     // A missing sound is not an error for the game: each one is optional.
-    const [loop, hey, ...moves] = await Promise.allSettled([
-      loadBuffer(soundFairy),
-      loadBuffer(soundFairyHey),
-      ...moveUrls.map((url) => loadBuffer(url))
+    const settled = async (urls: readonly string[]) =>
+      (await Promise.allSettled(urls.map(loadBuffer))).flatMap((result) =>
+        result.status === 'fulfilled' ? [result.value] : []
+      )
+    const [loop, ...loaded] = await Promise.all([
+      settled([soundFairyFloat]),
+      ...voiceNames.map((name) => settled(voiceUrls[name]))
     ])
     // Left the app while the sounds were loading.
     if (ctx !== context) return
-    if (loop.status === 'fulfilled') buffer = loop.value
-    if (hey.status === 'fulfilled') heyBuffer = hey.value
-    moveBuffers = moves.flatMap((move) => (move.status === 'fulfilled' ? [move.value] : []))
+    buffer = loop[0] ?? null
+    voices = Object.fromEntries(voiceNames.map((name, i) => [name, loaded[i]]))
     start()
   })
 
@@ -130,8 +146,7 @@ export function useFairySound() {
     panner = null
     loopGain = null
     buffer = null
-    heyBuffer = null
-    moveBuffers = []
+    voices = {}
     ctx?.close().catch(() => {})
     ctx = null
   })
@@ -150,26 +165,24 @@ export function useFairySound() {
     }
   }
 
-  /** Volume of the loop, 0..1 (the one-shots are not affected). */
+  /** Volume of the loop, 0..1 (the voices are not affected). */
   function setLoudness(value: number) {
     if (Math.abs(value - loudness) < LOUDNESS_STEP) return
     loudness = value
     if (ctx && loopGain) loopGain.gain.setTargetAtTime(value, ctx.currentTime, LOUDNESS_GLIDE_S)
   }
 
-  /** Her call, from where she is. Call after `update` so that it uses her current position. */
-  function playHey() {
-    playOnce(heyBuffer)
+  /** One of her voices, from where she is: call it after `update`, so that it uses her current position. */
+  function play(voice: FairyVoice) {
+    const options = voices[voice]
+    if (!ctx || !panner || !options?.length || ctx.state !== 'running') return
+    let index = Math.floor(Math.random() * options.length)
+    if (index === lastIndex[voice] && options.length > 1) index = (index + 1) % options.length
+    lastIndex[voice] = index
+    const shot = new AudioBufferSourceNode(ctx, { buffer: options[index] })
+    shot.connect(panner)
+    shot.start()
   }
 
-  /** One of her three movement sounds, never the same twice in a row. */
-  function playMove() {
-    if (moveBuffers.length === 0) return
-    let index = Math.floor(Math.random() * moveBuffers.length)
-    if (index === lastMove && moveBuffers.length > 1) index = (index + 1) % moveBuffers.length
-    lastMove = index
-    playOnce(moveBuffers[index])
-  }
-
-  return { update, setLoudness, playHey, playMove }
+  return { update, setLoudness, play }
 }
