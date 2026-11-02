@@ -66,11 +66,11 @@ describe('fairySpeed', () => {
 
 describe('fairyPlaybackRate', () => {
   it('speeds the sound up with the flight and stays within its range', () => {
-    expect(fairyPlaybackRate(0)).toBeCloseTo(3)
-    expect(fairyPlaybackRate(1.4)).toBeCloseTo(5)
+    expect(fairyPlaybackRate(0)).toBeCloseTo(0.85)
+    expect(fairyPlaybackRate(1.4)).toBeCloseTo(1.35)
     expect(fairyPlaybackRate(0.7)).toBeGreaterThan(fairyPlaybackRate(0.3))
-    expect(fairyPlaybackRate(5)).toBeCloseTo(5)
-    expect(fairyPlaybackRate(-1)).toBeCloseTo(3)
+    expect(fairyPlaybackRate(5)).toBeCloseTo(1.35)
+    expect(fairyPlaybackRate(-1)).toBeCloseTo(0.85)
   })
 })
 

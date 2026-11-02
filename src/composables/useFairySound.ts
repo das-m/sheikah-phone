@@ -1,7 +1,9 @@
 import { onMounted, onUnmounted } from 'vue'
 import type { Vec3 } from '@/lib/gesture'
 
-import soundFairy from '@/assets/audio/fairy.ogg'
+// The flying loop: the original sped up in the file (a: x4, b: x6 with a 40 Hz wing flutter, c: x8), so it sounds like
+// an insect. TODO(fairy): pick one by ear, then delete the other two files and the old fairy.ogg.
+import soundFairy from '@/assets/audio/fairy-fly-b.ogg'
 import soundFairyHey from '@/assets/audio/fairy-hey.ogg'
 import soundFairyMove1 from '@/assets/audio/fairy-sound-01.ogg'
 import soundFairyMove2 from '@/assets/audio/fairy-sound-02.ogg'

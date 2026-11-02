@@ -6,21 +6,29 @@ import type { LatLng } from '@/lib/geo'
  * Everything here is a guess to tune on a real phone.
  */
 export const fairyConfig: FairyConfig = {
-  // The player "has her in focus" when she is this close to the middle of the view (about the scope overlay).
-  focusConeDeg: 12,
+  // The player "has her in focus" when she is this close to the middle of the view (the ring on screen).
+  focusConeDeg: 20,
 
   // Phases 1-2: keep her in focus this long, losing her for up to the grace time does not reset it.
   focusSeconds: 5,
-  focusGraceSeconds: 0.5,
+  focusGraceSeconds: 1,
+  // In focus she gets curious: her swirl slows to this factor, so she is easier to keep.
+  swirlFocusSlowdown: 0.35,
 
-  // Phase 3: she plays: a bit faster, hopping left and right. Keep her in focus this long, or start over.
+  // Phase 3: she plays catch me: she hovers in front of the player and hops sideways now and then (mostly to the
+  // other side, sometimes a feint). Keep her in focus this long, or start over.
   escapeSeconds: 5,
   escapeGraceSeconds: 1.5,
-  escapeSpeedFactor: 1.3,
-  escapeMaxDegPerSecond: 35,
-  escapeHopSeconds: 1.2,
-  escapeHopDeg: 18,
-  escapeMaxDodgeDeg: 50,
+  escapeRadius: 1.5,
+  escapeElevationRad: 0.2,
+  escapeHopMinDeg: 18,
+  escapeHopMaxDeg: 30,
+  escapeHopMinSeconds: 0.7,
+  escapeHopMaxSeconds: 0.9,
+  escapeDwellMinSeconds: 0.6,
+  escapeDwellMaxSeconds: 1.2,
+  escapeFeintChance: 0.3,
+  escapeFrontLimitDeg: 50,
 
   // Phases 4-6: "hey", she shoots up and fades, then hides behind the player, closer each round.
   fleeSeconds: 0.8,

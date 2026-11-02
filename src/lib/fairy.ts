@@ -48,8 +48,8 @@ export function fairySpeed(tSec: number): number {
 }
 
 /** Her sound plays at this rate when she is slow and fast. The fast end is the one to tune by ear. */
-const SOUND_RATE_SLOW = 3
-const SOUND_RATE_FAST = 5
+const SOUND_RATE_SLOW = 0.85
+const SOUND_RATE_FAST = 1.35
 /** Speed (m/s) at which the sound reaches its fast rate. */
 const SOUND_SPEED_FULL = 1.4
 

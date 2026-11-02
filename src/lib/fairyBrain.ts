@@ -12,13 +12,23 @@ export interface FairyConfig {
   focusConeDeg: number
   focusSeconds: number
   focusGraceSeconds: number
+  /** While she is in focus in the swirl her clock slows to this factor (0..1): she is curious and floats. */
+  swirlFocusSlowdown: number
   escapeSeconds: number
   escapeGraceSeconds: number
-  escapeSpeedFactor: number
-  escapeMaxDegPerSecond: number
-  escapeHopSeconds: number
-  escapeHopDeg: number
-  escapeMaxDodgeDeg: number
+  /** In the game she hovers here in front of the player and hops sideways between the waiting times. */
+  escapeRadius: number
+  escapeElevationRad: number
+  escapeHopMinDeg: number
+  escapeHopMaxDeg: number
+  escapeHopMinSeconds: number
+  escapeHopMaxSeconds: number
+  escapeDwellMinSeconds: number
+  escapeDwellMaxSeconds: number
+  /** Chance (0..1) that a hop is a feint: she starts one way, then goes the other or stays. */
+  escapeFeintChance: number
+  /** She stays within this angle (degrees) of the view direction, so she plays in front and not behind. */
+  escapeFrontLimitDeg: number
   fleeSeconds: number
   fleeRiseMeters: number
   /** Distance of the hiding place in each round; its length is the number of times she has to be found. */
@@ -59,6 +69,10 @@ export interface BrainOutput {
   speed: number
   /** 0..1 progress of the running focus timer (phases 1-3 and the hide and seek). */
   focusProgress: number
+  /** 0..1 how worked up she is: little while she floats, a lot while she plays or flies. Drives the sparkle. */
+  excitement: number
+  /** Degrees between the view direction and her; she counts as in focus below `focusConeDeg`. */
+  focusAngle: number
   phase: FairyPhase
   /** How often she has been found in the hide and seek so far. */
   finds: number
@@ -96,14 +110,25 @@ export function sphericalToWorld(azimuth: number, elevation: number, radius: num
   return { x: flat * Math.sin(az), y: flat * Math.cos(az), z: radius * Math.sin(elevation) }
 }
 
-/** Turns a world vector clockwise around the vertical axis (seen from above), i.e. towards a larger azimuth. */
-function rotateAzimuth(v: Vec3, deg: number): Vec3 {
-  const a = deg * toRad
-  return {
-    x: v.x * Math.cos(a) + v.y * Math.sin(a),
-    y: -v.x * Math.sin(a) + v.y * Math.cos(a),
-    z: v.z
-  }
+/** One sideways hop in the game, as azimuth offsets in degrees from where she started. */
+interface Hop {
+  from: number
+  /** With a feint she first goes `first` of the way (until `FEINT_SPLIT`), then on to `last`. */
+  feint: boolean
+  first: number
+  last: number
+  t: number
+  duration: number
+}
+
+/** The share of the hop time after which a feint turns. */
+const FEINT_SPLIT = 0.4
+
+/** Her azimuth offset (degrees) after the share `u` (0..1) of a hop. */
+export function hopOffset(hop: Pick<Hop, 'feint' | 'first' | 'last'>, u: number): number {
+  if (!hop.feint) return hop.last * smooth(u)
+  if (u < FEINT_SPLIT) return hop.first * smooth(u / FEINT_SPLIT)
+  return hop.first + (hop.last - hop.first) * smooth((u - FEINT_SPLIT) / (1 - FEINT_SPLIT))
 }
 
 /** A small wandering offset of about `meters`, from her own organic path. */
@@ -133,14 +158,19 @@ export function befriendOffset(u: number, endDistance: number) {
 export function createFairyBrain(config: FairyConfig, rng: () => number = Math.random) {
   let phase: FairyPhase = 'swirl'
   let phaseTime = 0
-  /** Her swirl clock: it runs faster while she plays, so the path stays continuous. */
+  /** Her clock for the swirl and the small bobbing; it slows down while she floats curiously, so the path stays continuous. */
   let tau = 0
+  /** Factor on `tau`, eased towards `swirlFocusSlowdown` while she is in focus. */
+  let swirlSpeed = 1
   let finds = 0
   let hold = 0
   let lost = 0
-  let dodge = 0
-  let dodgeTarget = 0
-  let hopTimer = 0
+  let excitement = 0.15
+  /** The game: where she hovers (azimuth, degrees), the running hop, the waiting time until the next one. */
+  let escapeAzimuth = 0
+  let hop: Hop | null = null
+  let dwell = 0
+  let lastSide = 1
   let fleeFrom: Vec3 = ZERO
   let anchor: Vec3 = ZERO
   let guideAzimuth: number | null = null
@@ -183,14 +213,48 @@ export function createFairyBrain(config: FairyConfig, rng: () => number = Math.r
     phase = 'swirl'
     phaseTime = 0
     resetHold()
+    startBlend()
   }
 
   function enterEscape() {
     phase = 'escape'
     phaseTime = 0
     resetHold()
-    hopTimer = 0
+    // She starts to play where she is.
+    escapeAzimuth = azimuthDeg(position)
+    hop = null
+    dwell = range(config.escapeDwellMinSeconds, config.escapeDwellMaxSeconds)
+    startBlend()
     events.push('hey', 'move')
+  }
+
+  function range(min: number, max: number) {
+    return min + (max - min) * rng()
+  }
+
+  /** Starts a hop: mostly to the other side than the last one, never out of the front arc, sometimes a feint. */
+  function startHop(view: ViewBasis) {
+    const viewAzimuth = azimuthDeg(view.forward)
+    const inFront = (azimuth: number) =>
+      Math.abs(angleDifference(viewAzimuth, azimuth)) <= config.escapeFrontLimitDeg
+    const amplitude = range(config.escapeHopMinDeg, config.escapeHopMaxDeg)
+    let side = rng() < 0.7 ? -lastSide : lastSide
+    if (!inFront(escapeAzimuth + side * amplitude)) side = -side
+    lastSide = side
+    const delta = side * amplitude
+    const feint = rng() < config.escapeFeintChance
+    // A feint goes the other way (if there is room) or ends where she started.
+    const back = -delta * 0.6
+    const goesBack = rng() < 0.5 && inFront(escapeAzimuth + back)
+    hop = {
+      from: escapeAzimuth,
+      feint,
+      first: delta * 0.3,
+      last: feint ? (goesBack ? back : 0) : delta,
+      t: 0,
+      // A feint takes longer, so that the turn is not faster than a plain hop.
+      duration: range(config.escapeHopMinSeconds, config.escapeHopMaxSeconds) * (feint ? 1.5 : 1)
+    }
   }
 
   function startFlee() {
@@ -234,9 +298,10 @@ export function createFairyBrain(config: FairyConfig, rng: () => number = Math.r
     phase = 'swirl'
     phaseTime = 0
     tau = 0
+    swirlSpeed = 1
     finds = 0
-    dodge = 0
-    dodgeTarget = 0
+    excitement = 0.15
+    hop = null
     guideAzimuth = null
     blendFrom = null
     resetHold()
@@ -275,6 +340,23 @@ export function createFairyBrain(config: FairyConfig, rng: () => number = Math.r
     }
   }
 
+  /** How worked up she wants to be in the current phase; `excitement` eases towards it. */
+  function excitementTarget(progress: number): number {
+    switch (phase) {
+      case 'swirl':
+        return 0.15 + 0.5 * progress
+      case 'escape':
+        return 0.8
+      case 'flee':
+      case 'befriend':
+        return 1
+      case 'hidden':
+        return 0.3 + 0.5 * progress
+      case 'guide':
+        return 0.4
+    }
+  }
+
   function step(input: BrainInput): BrainOutput {
     const dt = clamp(input.dt, 0, MAX_DT)
     const { view } = input
@@ -286,8 +368,8 @@ export function createFairyBrain(config: FairyConfig, rng: () => number = Math.r
     phaseTime += dt
 
     const canBeFocused = phase === 'swirl' || phase === 'escape' || phase === 'hidden'
-    const focused =
-      canBeFocused && alpha > 0.6 && focusAngleDeg(view.forward, position) <= config.focusConeDeg
+    const focusAngle = focusAngleDeg(view.forward, position)
+    const focused = canBeFocused && alpha > 0.6 && focusAngle <= config.focusConeDeg
 
     let next: Vec3 = position
     let nextAlpha = 1
@@ -297,24 +379,27 @@ export function createFairyBrain(config: FairyConfig, rng: () => number = Math.r
 
     switch (phase) {
       case 'swirl': {
-        tau += dt
-        dodgeTarget = 0
+        // Caught in the view she gets curious and floats instead of darting around.
+        const target = focused ? config.swirlFocusSlowdown : 1
+        swirlSpeed += (target - swirlSpeed) * Math.min(1, dt / 0.25)
+        tau += dt * swirlSpeed
         holdStep(focused, dt, config.focusGraceSeconds)
         if (hold >= config.focusSeconds) enterEscape()
         progress = hold / config.focusSeconds
         break
       }
       case 'escape': {
-        tau += dt * config.escapeSpeedFactor
-        hopTimer -= dt
-        if (hopTimer <= 0) {
-          hopTimer = config.escapeHopSeconds * (0.7 + 0.6 * rng())
-          const side = rng() < 0.5 ? -1 : 1
-          let target = dodgeTarget + side * config.escapeHopDeg
-          if (Math.abs(target) > config.escapeMaxDodgeDeg) {
-            target = dodgeTarget - side * config.escapeHopDeg
+        tau += dt
+        if (hop) {
+          hop.t += dt
+          escapeAzimuth = hop.from + hopOffset(hop, hop.t / hop.duration)
+          if (hop.t >= hop.duration) {
+            hop = null
+            dwell = range(config.escapeDwellMinSeconds, config.escapeDwellMaxSeconds)
           }
-          dodgeTarget = target
+        } else {
+          dwell -= dt
+          if (dwell <= 0) startHop(view)
         }
         const failed = holdStep(focused, dt, config.escapeGraceSeconds)
         if (failed) enterSwirl()
@@ -367,13 +452,21 @@ export function createFairyBrain(config: FairyConfig, rng: () => number = Math.r
     // Positions that follow from the (possibly just changed) phase.
     switch (phase) {
       case 'swirl':
-      case 'escape': {
-        const maxStep = config.escapeMaxDegPerSecond * dt
-        dodge += clamp(dodgeTarget - dodge, -maxStep, maxStep)
-        next = rotateAzimuth(fairyPosition(tau), dodge)
+        next = fairyPosition(tau)
         glow = 1 + 0.5 * progress
         break
-      }
+      case 'escape':
+        // In front of the player and fixed in the world between the hops, with a little bobbing.
+        next = add(
+          sphericalToWorld(
+            escapeAzimuth,
+            config.escapeElevationRad + 0.05 * Math.sin(tau * 1.1),
+            config.escapeRadius + 0.1 * Math.sin(tau * 0.8)
+          ),
+          bob(tau, 0.04)
+        )
+        glow = 1 + 0.5 * progress
+        break
       case 'hidden':
         next = add(anchor, bob(tau, config.hideBobMeters))
         nextAlpha = clamp(phaseTime / config.hideFadeInSeconds, 0, 1)
@@ -411,6 +504,8 @@ export function createFairyBrain(config: FairyConfig, rng: () => number = Math.r
     position = next
     alpha = nextAlpha
 
+    excitement += (excitementTarget(progress) - excitement) * Math.min(1, dt / 0.3)
+
     return {
       position,
       alpha,
@@ -418,6 +513,8 @@ export function createFairyBrain(config: FairyConfig, rng: () => number = Math.r
       loudness,
       speed,
       focusProgress: clamp(progress, 0, 1),
+      excitement,
+      focusAngle,
       phase,
       finds,
       events

@@ -5,7 +5,13 @@ import { useCompass } from '@/composables/useCompass'
 import { useFairySound } from '@/composables/useFairySound'
 import { useOrientation } from '@/composables/useOrientation'
 import { fairyConfig, fairyGuideTarget } from '@/game/fairy'
-import { fairyPlaybackRate, project, transformFromBasis, viewBasis } from '@/lib/fairy'
+import {
+  CAMERA_VFOV_DEG,
+  fairyPlaybackRate,
+  project,
+  transformFromBasis,
+  viewBasis
+} from '@/lib/fairy'
 import { createFairyBrain } from '@/lib/fairyBrain'
 import type { BrainOutput } from '@/lib/fairyBrain'
 import { normalizeDegrees } from '@/lib/geo'
@@ -13,8 +19,11 @@ import type { Vec3 } from '@/lib/gesture'
 
 /** Glow diameter as a fraction of the screen height at 1 m; it shrinks with distance. */
 const GLOW_SIZE = 0.26
-const TRAIL_SPAWN_MS = 40
-const TRAIL_LIFE_MS = 900
+const TRAIL_SPAWN_CALM_MS = 160
+const TRAIL_SPAWN_EXCITED_MS = 30
+const TRAIL_LIFE_CALM_MS = 600
+const TRAIL_LIFE_EXCITED_MS = 1100
+const toRad = Math.PI / 180
 /** How far (m) a trail sparkle may drift from the fairy's path when it is born. */
 const TRAIL_SPREAD = 0.05
 const BURST_COUNT = 36
@@ -28,6 +37,8 @@ interface Sparkle {
   life: number
   /** 0..1, how visible she was when it was born (it does not glow while she is faded out). */
   strength: number
+  /** Size factor, larger while she is worked up. */
+  size: number
   phase: number
 }
 
@@ -62,7 +73,7 @@ function labelFor(out: BrainOutput): string {
 let frame = 0
 let observer: ResizeObserver | null = null
 
-/** A soft blue dot with a white core, drawn once and scaled for the fairy and each sparkle. */
+/** A soft rose dot with a white core, drawn once and scaled for the fairy and each sparkle. */
 function createGlowSprite(): HTMLCanvasElement {
   const size = 128
   const sprite = document.createElement('canvas')
@@ -70,9 +81,9 @@ function createGlowSprite(): HTMLCanvasElement {
   const g = sprite.getContext('2d')!
   const gradient = g.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2)
   gradient.addColorStop(0, 'rgba(255, 255, 255, 1)')
-  gradient.addColorStop(0.15, 'rgba(200, 235, 255, 0.9)')
-  gradient.addColorStop(0.4, 'rgba(90, 170, 255, 0.4)')
-  gradient.addColorStop(1, 'rgba(60, 130, 255, 0)')
+  gradient.addColorStop(0.15, 'rgba(255, 228, 240, 0.9)')
+  gradient.addColorStop(0.4, 'rgba(255, 140, 190, 0.4)')
+  gradient.addColorStop(1, 'rgba(240, 100, 170, 0)')
   g.fillStyle = gradient
   g.fillRect(0, 0, size, size)
   return sprite
@@ -106,15 +117,46 @@ onMounted(() => {
     g!.drawImage(glow, x - diameter / 2, y - diameter / 2, diameter, diameter)
   }
 
-  function addSparkle(center: Vec3, spread: number, now: number, life: number, strength: number) {
+  function addSparkle(
+    center: Vec3,
+    spread: number,
+    now: number,
+    life: number,
+    strength: number,
+    size = 1
+  ) {
     const jitter = () => (Math.random() - 0.5) * 2 * spread
     sparkles.push({
       position: { x: center.x + jitter(), y: center.y + jitter(), z: center.z + jitter() },
       born: now,
       life,
       strength,
+      size,
       phase: Math.random() * Math.PI * 2
     })
+  }
+
+  /** The ring around the middle of the view in which she counts as in focus; its arc fills while she is held. */
+  function drawFocusRing(progress: number) {
+    const cx = width / 2
+    const cy = height / 2
+    const radius =
+      ((height / 2) * Math.tan(fairyConfig.focusConeDeg * toRad)) /
+      Math.tan((CAMERA_VFOV_DEG * toRad) / 2)
+    g!.globalCompositeOperation = 'source-over'
+    g!.lineWidth = 2
+    g!.strokeStyle = 'rgb(255, 150, 200)'
+    g!.globalAlpha = 0.25
+    g!.beginPath()
+    g!.arc(cx, cy, radius, 0, Math.PI * 2)
+    g!.stroke()
+    if (progress > 0) {
+      g!.lineWidth = 4
+      g!.globalAlpha = 0.9
+      g!.beginPath()
+      g!.arc(cx, cy, radius, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * progress)
+      g!.stroke()
+    }
   }
 
   function tick(now: number) {
@@ -154,15 +196,23 @@ onMounted(() => {
           addSparkle(out.position, BURST_SPREAD, now, BURST_LIFE_MS, 1)
     }
 
-    const label = labelFor(out)
+    // The angle to her is temporary, for tuning the focus ring and cone.
+    const label = `${labelFor(out)} ${Math.round(out.focusAngle)}°`
     if (label !== shownLabel) {
       shownLabel = label
       phaseLabel.value = label
     }
 
-    if (out.alpha > 0.05 && now - lastSpawn >= TRAIL_SPAWN_MS) {
+    // Calm: a thin, short trail. Worked up: a dense, long and larger one.
+    const e = out.excitement
+    const spawnMs = TRAIL_SPAWN_CALM_MS + (TRAIL_SPAWN_EXCITED_MS - TRAIL_SPAWN_CALM_MS) * e
+    if (out.alpha > 0.05 && now - lastSpawn >= spawnMs) {
       lastSpawn = now
-      addSparkle(out.position, TRAIL_SPREAD, now, TRAIL_LIFE_MS, out.alpha)
+      const life = TRAIL_LIFE_CALM_MS + (TRAIL_LIFE_EXCITED_MS - TRAIL_LIFE_CALM_MS) * e
+      const size = 0.7 + 0.8 * e
+      for (let i = 0; i < (e > 0.6 ? 2 : 1); i++) {
+        addSparkle(out.position, TRAIL_SPREAD, now, life, out.alpha, size)
+      }
     }
     let kept = 0
     for (const sparkle of sparkles)
@@ -179,7 +229,7 @@ onMounted(() => {
       drawGlow(
         point.x,
         point.y,
-        height * GLOW_SIZE * point.scale * 0.3 * (1 - age),
+        height * GLOW_SIZE * point.scale * 0.3 * sparkle.size * (1 - age),
         0.9 * (1 - age) * twinkle * sparkle.strength
       )
     }
@@ -189,6 +239,14 @@ onMounted(() => {
       // The closer she is to being caught, the faster she pulses.
       const pulse = 1 + 0.12 * Math.sin(t * (6 + 10 * out.focusProgress))
       drawGlow(point.x, point.y, height * GLOW_SIZE * point.scale * out.glow * pulse, out.alpha)
+    }
+
+    if (
+      out.phase === 'swirl' ||
+      out.phase === 'escape' ||
+      (out.phase === 'hidden' && out.alpha > 0.6)
+    ) {
+      drawFocusRing(out.focusProgress)
     }
   }
   frame = requestAnimationFrame(tick)

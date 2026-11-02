@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import type { ViewBasis } from './fairy'
-import { azimuthDeg, befriendOffset, createFairyBrain, sphericalToWorld } from './fairyBrain'
+import { fairyPosition } from './fairy'
+import {
+  azimuthDeg,
+  befriendOffset,
+  createFairyBrain,
+  hopOffset,
+  sphericalToWorld
+} from './fairyBrain'
 import type { BrainOutput, FairyBrain, FairyConfig, FairyEvent } from './fairyBrain'
 import { angleDifference } from './geo'
 import type { Vec3 } from './gesture'
@@ -9,13 +16,19 @@ const config: FairyConfig = {
   focusConeDeg: 12,
   focusSeconds: 5,
   focusGraceSeconds: 0.5,
+  swirlFocusSlowdown: 0.35,
   escapeSeconds: 5,
   escapeGraceSeconds: 1.5,
-  escapeSpeedFactor: 1.3,
-  escapeMaxDegPerSecond: 35,
-  escapeHopSeconds: 1.2,
-  escapeHopDeg: 18,
-  escapeMaxDodgeDeg: 50,
+  escapeRadius: 1.5,
+  escapeElevationRad: 0.2,
+  escapeHopMinDeg: 18,
+  escapeHopMaxDeg: 30,
+  escapeHopMinSeconds: 0.7,
+  escapeHopMaxSeconds: 0.9,
+  escapeDwellMinSeconds: 0.6,
+  escapeDwellMaxSeconds: 1.2,
+  escapeFeintChance: 0.3,
+  escapeFrontLimitDeg: 50,
   fleeSeconds: 0.8,
   fleeRiseMeters: 8,
   hideRadii: [1.5, 1.2, 0.9],
@@ -38,6 +51,7 @@ const DT = 0.05
 const length = (v: Vec3) => Math.hypot(v.x, v.y, v.z)
 const scale = (v: Vec3, k: number): Vec3 => ({ x: v.x * k, y: v.y * k, z: v.z * k })
 const dot = (a: Vec3, b: Vec3) => a.x * b.x + a.y * b.y + a.z * b.z
+const sub = (a: Vec3, b: Vec3): Vec3 => ({ x: a.x - b.x, y: a.y - b.y, z: a.z - b.z })
 
 /** A view looking at `target` with the horizon level. */
 function lookAt(target: Vec3): ViewBasis {
@@ -153,13 +167,67 @@ describe('escape', () => {
     expect(r.run(1, away).phase).toBe('swirl')
   })
 
-  it('hops sideways but never faster than the limit allows (plus her own swirl)', () => {
-    const r = setup()
+  /** Plays into the game, then watches her for a minute against a view that stays where it was (she cannot be lost). */
+  function watchGame(game: FairyConfig) {
+    // Neither lost nor won: the grace time and the time to hold are endless.
+    const r = makeRun(
+      createFairyBrain({ ...game, escapeGraceSeconds: 1e6, escapeSeconds: 1e6 }, seededRng(3))
+    )
     r.run(5.2, track)
-    let maxSpeed = 0
-    for (let i = 0; i < 100; i++) maxSpeed = Math.max(maxSpeed, r.run(DT, track).speed)
-    // Swirl speed tops out near 1.6 m/s, times the speed factor, plus the dodge at 35 deg/s over 1.5 m.
-    expect(maxSpeed).toBeLessThan(1.6 * 1.3 + ((35 * Math.PI) / 180) * 1.9 + 0.3)
+    expect(r.out.phase).toBe('escape')
+    const view = lookAt(r.out.position)
+    const viewAzimuth = azimuthDeg(view.forward)
+    const samples: { az: number; speed: number }[] = []
+    for (let i = 0; i < 1200; i++) {
+      const out = r.run(DT, fixed(view))
+      samples.push({ az: azimuthDeg(out.position), speed: 0 })
+      if (samples.length > 1) {
+        const previous = samples[samples.length - 2].az
+        samples[samples.length - 1].speed =
+          Math.abs(angleDifference(previous, samples[samples.length - 1].az)) / DT
+      }
+    }
+    return { viewAzimuth, samples }
+  }
+
+  it('plays in front of the player: she never leaves the front arc of the view', () => {
+    for (const feintChance of [0, 0.3, 1]) {
+      const { viewAzimuth, samples } = watchGame({ ...config, escapeFeintChance: feintChance })
+      for (const { az } of samples) {
+        // A little extra for her bobbing.
+        expect(Math.abs(angleDifference(viewAzimuth, az))).toBeLessThanOrEqual(
+          config.escapeFrontLimitDeg + 4
+        )
+      }
+    }
+  })
+
+  it('hops with pauses in between instead of drifting, at a pace that can be followed', () => {
+    const { samples } = watchGame(config)
+    const speeds = samples.slice(1).map((s) => s.speed)
+    // Peak of a 30 degree smoothstep hop over 0.7 s is about 64 deg/s.
+    expect(Math.max(...speeds)).toBeLessThan(75)
+    const still = speeds.filter((s) => s < 3).length / speeds.length
+    expect(still).toBeGreaterThan(0.25)
+    expect(still).toBeLessThan(0.85)
+  })
+
+  it('switches side most of the time', () => {
+    const { samples } = watchGame({ ...config, escapeFeintChance: 0 })
+    // Direction of each hop: the sign of the azimuth change over runs of motion.
+    const directions: number[] = []
+    let sum = 0
+    for (const [i, s] of samples.entries()) {
+      if (i > 0 && s.speed >= 3) sum += angleDifference(samples[i - 1].az, s.az)
+      else if (sum !== 0) {
+        directions.push(Math.sign(sum))
+        sum = 0
+      }
+    }
+    let switched = 0
+    for (let i = 1; i < directions.length; i++) if (directions[i] !== directions[i - 1]) switched++
+    expect(directions.length).toBeGreaterThan(20)
+    expect(switched / (directions.length - 1)).toBeGreaterThan(0.5)
   })
 
   it('flees with a "hey" when she was kept in focus, and fades out', () => {
@@ -172,6 +240,68 @@ describe('escape', () => {
     r.run(0.4, fixed(north))
     expect(r.out.alpha).toBeLessThan(0.7)
     expect(r.out.position.z).toBeGreaterThan(1.5)
+  })
+})
+
+describe('hopOffset', () => {
+  const plain = { feint: false, first: 6, last: 20 }
+  const fake = { feint: true, first: 6, last: -16 }
+
+  it('runs smoothly from the start to the target', () => {
+    expect(hopOffset(plain, 0)).toBe(0)
+    expect(hopOffset(plain, 1)).toBeCloseTo(20)
+    expect(hopOffset(plain, 0.5)).toBeCloseTo(10)
+    let previous = 0
+    for (let u = 0.05; u <= 1; u += 0.05) {
+      expect(hopOffset(plain, u)).toBeGreaterThanOrEqual(previous)
+      previous = hopOffset(plain, u)
+    }
+  })
+
+  it('a feint starts towards one side, then turns and goes the other way', () => {
+    expect(hopOffset(fake, 0.4)).toBeCloseTo(6)
+    expect(hopOffset(fake, 0.2)).toBeGreaterThan(0)
+    expect(hopOffset(fake, 0.2)).toBeLessThan(6)
+    expect(hopOffset(fake, 0.7)).toBeLessThan(6)
+    expect(hopOffset(fake, 1)).toBeCloseTo(-16)
+    // It really crosses where she started.
+    expect(hopOffset(fake, 0.85)).toBeLessThan(0)
+  })
+
+  it('a feint can also end where she started', () => {
+    expect(hopOffset({ feint: true, first: 6, last: 0 }, 1)).toBeCloseTo(0)
+  })
+})
+
+describe('swirl curiosity and excitement', () => {
+  it('floats more slowly while she is in focus and speeds up again when she is lost', () => {
+    const r = setup()
+    r.run(3, track)
+    // The swirl clock eases to 0.35 within about a quarter second: about 1.21 s have passed on it.
+    expect(length(sub(r.out.position, fairyPosition(1.2125)))).toBeLessThan(0.05)
+    r.run(3, away)
+    // And back to 1: about 2.84 s more.
+    expect(length(sub(r.out.position, fairyPosition(1.2125 + 2.8375)))).toBeLessThan(0.1)
+  })
+
+  it('is calm while floating and worked up while playing, flying and befriending', () => {
+    const r = setup()
+    expect(r.run(4, away).excitement).toBeLessThan(0.25)
+    r.skip()
+    expect(r.out.phase).toBe('escape')
+    expect(r.run(1.5, track).excitement).toBeGreaterThan(0.7)
+    r.skip(4)
+    expect(r.out.phase).toBe('befriend')
+    expect(r.run(1.5, fixed(north)).excitement).toBeGreaterThan(0.85)
+    r.skip()
+    expect(r.out.phase).toBe('guide')
+    expect(Math.abs(r.run(3, fixed(north)).excitement - 0.4)).toBeLessThan(0.05)
+  })
+
+  it('reports the angle to her', () => {
+    const r = setup()
+    expect(r.run(0.5, track).focusAngle).toBeLessThan(5)
+    expect(r.run(0.5, away).focusAngle).toBeGreaterThan(170)
   })
 })
 
