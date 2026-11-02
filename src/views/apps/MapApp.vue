@@ -5,7 +5,8 @@ import 'maplibre-gl/dist/maplibre-gl.css'
 import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?url'
 import { onMounted, onUnmounted, ref, watch } from 'vue'
 
-import soundSensorDeactivate from '@/assets/audio/sensor-touch.ogg'
+import soundSensorActivate from '@/assets/audio/sensor-activate.ogg'
+import soundSensorDeactivate from '@/assets/audio/sensor-error.ogg'
 import markerIconArea from '@/assets/images/map/area.png'
 import BackButton from '@/components/BackButton.vue'
 import ClockWidget from '@/components/widgets/ClockWidget.vue'
@@ -37,14 +38,15 @@ const MAX_AREA_OUTLINE_PX = 4000
 const { position: userPosition } = useGeolocation()
 const { heading } = useHeading()
 
-// Sensor mode: the scanner selects a sensor, it beeps while the map is open, the icon deactivates it.
-const { active: activeSensor, deactivate: deactivateSensor } = useSensorMode()
+// Sensor mode: the scanner selects a sensor, it beeps while the map is open, the HUD switches it off and on.
+const { selected: selectedSensor, active: activeSensor, toggle: toggleSensor } = useSensorMode()
 useSensorBeeper()
+const audioSensorActivate = new Audio(soundSensorActivate)
 const audioSensorDeactivate = new Audio(soundSensorDeactivate)
 
 function onSensorTap() {
-  playSound(audioSensorDeactivate)
-  deactivateSensor()
+  playSound(activeSensor.value ? audioSensorDeactivate : audioSensorActivate)
+  toggleSensor()
 }
 
 const root = ref<HTMLElement | null>(null)
@@ -134,6 +136,7 @@ function createArea(area: Area) {
 function createRegion(region: Region) {
   const el = document.createElement('div')
   el.className = 'App-map-region'
+  el.style.setProperty('--scale', String(region.scale ?? 1))
   const name = document.createElement('span')
   name.className = 'App-map-region-name'
   name.textContent = region.name
@@ -300,15 +303,30 @@ function centerMapOnUser() {
 
       <div class="App-map-button App-map-button--recenter" @click="centerMapOnUser"></div>
 
-      <!-- The active sensor; dimmed when it has no location (nothing to measure, so it is silent). Tap: deactivate. -->
+      <!-- The sensor: the name of the target (or "Aus") and an icon, beside the recenter button. Not there before a
+        sensor was activated once (it would be a spoiler), then it stays: "Aus" when switched off, until another sensor
+        is activated. Dimmed when the target has no location (nothing to measure, so it is silent). Tap: switch on/off. -->
       <button
+        v-if="selectedSensor"
         type="button"
         class="App-map-sensor"
-        :class="{ 'App-map-sensor--silent': !activeSensor.location }"
-        v-if="activeSensor"
-        :aria-label="`Sensor ${activeSensor.name} ausschalten`"
+        :class="{
+          'App-map-sensor--on': activeSensor,
+          'App-map-sensor--silent': activeSensor && !activeSensor.location
+        }"
+        :aria-label="
+          activeSensor
+            ? `Sensor ${activeSensor.name} ausschalten`
+            : `Sensor ${selectedSensor.name} einschalten`
+        "
         @click="onSensorTap"
-      ></button>
+      >
+        <span class="App-map-sensor-text">
+          <span class="App-map-sensor-name">{{ activeSensor ? activeSensor.name : 'Aus' }}</span>
+          <span class="App-map-sensor-label" aria-hidden="true">Sensor</span>
+        </span>
+        <span class="App-map-sensor-icon" aria-hidden="true"></span>
+      </button>
 
       <div class="App-map-widgets">
         <ClockWidget />
@@ -329,6 +347,25 @@ $user-delay: calc(var(--screen-delay) + 0.6s);
 $reveal-duration: 1.2s;
 // Markers, buttons and widgets settle in like the home screen does, as the circle is about halfway.
 $settle-delay: 0.6s;
+
+// Pale khaki lettering in a thin weight with a darker olive glow, like the labels of the game map: no edge, no neon.
+// The runes use the same look.
+@mixin map-label($runes: false) {
+  @if $runes {
+    @include widget.label;
+  } @else {
+    font-family: 'Roboto', sans-serif;
+    font-weight: 400;
+    letter-spacing: 0.01em;
+    white-space: nowrap;
+  }
+
+  color: var(--color-map-label);
+  text-shadow:
+    0 0 3px color-mix(in srgb, var(--color-map-label-glow) 80%, transparent),
+    0 0 8px color-mix(in srgb, var(--color-map-label-glow) 70%, transparent),
+    0 0 14px color-mix(in srgb, var(--color-map-label-glow) 45%, transparent);
+}
 
 .App {
   @include surface.surface;
@@ -504,22 +541,19 @@ $settle-delay: 0.6s;
     }
 
     :deep(.App-map-area-title) {
+      @include map-label;
+
       position: absolute;
       top: 50%;
       left: 50%;
       transform: translate(-50%, 0);
       margin-top: calc(48 * var(--u));
-      font-family: 'HyliaSerif', serif;
-      font-size: 1em;
-      white-space: nowrap;
-      color: var(--color-secondary);
-      text-shadow:
-        0 0 4px var(--color-base),
-        0 0 8px var(--color-base);
+      font-size: 1.1em;
     }
 
-    // Region: a big name in the Hylia serif and a runic caption under it.
+    // Region: a big name and a runic caption under it, sized by --scale (markers.ts).
     :deep(.App-map-region) {
+      font-size: calc(1em * var(--scale, 1));
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -530,20 +564,15 @@ $settle-delay: 0.6s;
     }
 
     :deep(.App-map-region-name) {
-      font-family: 'HyliaSerif', serif;
-      font-size: 2.6em;
-      letter-spacing: 0.12em;
-      color: var(--color-contrast);
-      text-shadow:
-        0 0 6px var(--color-base),
-        0 0 14px var(--color-primary);
+      @include map-label;
+
+      font-size: 2em;
     }
 
     :deep(.App-map-region-caption) {
-      @include widget.label;
+      @include map-label($runes: true);
 
-      font-size: 1.15em;
-      text-shadow: 0 0 6px var(--color-base);
+      font-size: 1.5em;
     }
 
     &-button {
@@ -599,26 +628,65 @@ $settle-delay: 0.6s;
       }
     }
 
-    // sensor.png is 225x55, the label of the active sensor, left of the recenter button.
+    // The sensor, left of the recenter button and centered on it: name in the size of the clock digits, the runic caption
+    // under it (right-aligned, like the widgets), and the icon (sensor-off.svg: an X, sensor-on.svg: the signal).
     &-sensor {
       position: absolute;
       z-index: 100;
-      bottom: calc(var(--frame-bottom) + 8px + 12px);
+      bottom: calc(var(--frame-bottom) + 8px);
       right: calc(var(--frame-corner-br) + 8px + 80px + 12px);
-      width: 225px;
-      height: 55px;
+      height: 80px;
+      display: flex;
+      align-items: center;
+      gap: 0.6em;
       padding: 0;
       border: 0;
-      background: rgba(0, 0, 0, 0.45) url(@/assets/images/map/sensor.png) center / contain no-repeat;
+      background: none;
+      font: inherit;
+      color: var(--color-primary);
+      text-shadow: 0 0 10px var(--color-primary);
       cursor: pointer;
       -webkit-tap-highlight-color: transparent;
 
       &:hover {
-        background-color: rgba(0, 0, 0, 0.8);
+        filter: brightness(1.3);
       }
 
       &--silent {
         opacity: 0.5;
+      }
+
+      &-text {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+      }
+
+      &-name {
+        max-width: 12em;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        font-size: 1.5em;
+        font-weight: 500;
+        line-height: 1.2;
+      }
+
+      &-label {
+        @include widget.label;
+      }
+
+      &-icon {
+        flex: none;
+        // as big as the button's icon, which is in px as well
+        width: 44px;
+        height: 44px;
+        background: url(@/assets/images/map/sensor-off.svg) center / 55% no-repeat;
+      }
+
+      &--on &-icon {
+        background-image: url(@/assets/images/map/sensor-on.svg);
+        background-size: contain;
       }
     }
 

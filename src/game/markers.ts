@@ -17,8 +17,9 @@ import type { LatLng } from '@/lib/geo'
 //    is a small one, shown later (`poiLevels[2].minZoom`) and drawn smaller. A POI's own `minZoom` / `maxZoom` win.
 //  - `areas`: a larger but specific place. The dotted outline is drawn with the real `radiusMeters` and grows with the
 //    zoom; its ring icon and title fade out above `labelMaxZoom` (default `areaLabelMaxZoom`), the outline stays.
-//  - `regions`: big labels for whole regions (fantasy names). `name` is set in the Hylia serif, `caption` below it in
-//    the Sheikah runes (the font turns normal letters into runes, so write it like a normal word).
+//  - `regions`: big labels for whole regions (fantasy names), olive gold with a glow like the labels of the game map.
+//    `name` is the text, `caption` below it is set in the Sheikah runes (the font turns normal letters into runes, so
+//    write it like a normal word), `scale` makes a label bigger or smaller.
 export interface Visibility {
   minZoom?: number
   maxZoom?: number
@@ -55,6 +56,8 @@ export interface Region extends Visibility {
   name: string
   caption?: string
   position: LatLng
+  /** Size of the label relative to the default (1): bigger for the big regions. */
+  scale?: number
 }
 
 // Torhaus positions: OpenStreetMap, matching de.wikipedia "Ludwigsburger Torhäuser".
@@ -342,6 +345,7 @@ export const regions: Region[] = [
     name: 'Hyrule-Ebene',
     caption: 'Ludwigsburg',
     position: { lat: 48.8905, lng: 9.1925 },
+    scale: 1.25,
     maxZoom: 15
   },
   {

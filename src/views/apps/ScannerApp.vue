@@ -221,7 +221,7 @@ onUnmounted(() => {
     border-bottom: 2px solid var(--color-secondary);
     background: rgba(0, 0, 0, 0.55);
     color: var(--color-secondary);
-    font-family: OpenSans, sans-serif;
+    font-family: Roboto, sans-serif;
     font-style: italic;
     font-size: 1.1em;
     text-align: right;

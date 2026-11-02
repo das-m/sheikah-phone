@@ -48,7 +48,13 @@ const criticalUrls = Object.values(
   )
 ).filter((url) => !url.startsWith('data:'))
 
-const fontSpecs = ['1em OpenSans', 'italic 1em OpenSans', '1em HyliaSerif', '1em Sheikah']
+const fontSpecs = [
+  '1em Roboto',
+  '500 1em Roboto',
+  'italic 1em Roboto',
+  '1em HyliaSerif',
+  '1em Sheikah'
+]
 
 function loadImage(url: string): Promise<unknown> {
   const image = new Image()

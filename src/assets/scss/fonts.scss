@@ -1,17 +1,30 @@
+// Roboto at the same font-size looks bigger than the Open Sans it replaced: size-adjust shrinks only its glyphs, so
+// the runes, the layout and --font-base stay as they were tuned.
 @font-face {
-  font-family: 'OpenSans';
+  font-family: 'Roboto';
   font-weight: 400;
   font-style: normal;
   font-display: auto;
-  src: url(@/assets/fonts/OpenSans-VariableFont_wdth,wght.ttf) format('truetype');
+  size-adjust: 92%;
+  src: url(@/assets/fonts/roboto-latin-400-normal.woff2) format('woff2');
 }
 
 @font-face {
-  font-family: 'OpenSans';
+  font-family: 'Roboto';
+  font-weight: 500;
+  font-style: normal;
+  font-display: auto;
+  size-adjust: 92%;
+  src: url(@/assets/fonts/roboto-latin-500-normal.woff2) format('woff2');
+}
+
+@font-face {
+  font-family: 'Roboto';
   font-weight: 400;
   font-style: italic;
   font-display: auto;
-  src: url(@/assets/fonts/OpenSans-Italic-VariableFont_wdth,wght.ttf) format('truetype');
+  size-adjust: 92%;
+  src: url(@/assets/fonts/roboto-latin-400-italic.woff2) format('woff2');
 }
 
 @font-face {

@@ -19,9 +19,9 @@ defineProps<{ label: string }>()
   align-items: center;
   gap: 0.6em;
   margin: 0 0 0.5em;
-  font-family: OpenSans, sans-serif;
+  font-family: Roboto, sans-serif;
   font-style: italic;
-  font-weight: 600;
+  font-weight: 500;
   font-size: 1em;
   color: var(--color-primary);
   text-shadow: 0 0 6px var(--color-primary);
