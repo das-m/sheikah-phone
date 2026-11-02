@@ -3,8 +3,8 @@ import { describe, expect, it } from 'vitest'
 import {
   BOOT_TIMING,
   isBootDone,
-  shownProgress,
-  timeProgress,
+  isFrameDue,
+  isLogoDue,
   workFraction,
   type GroupProgress,
   type PreloadGroup
@@ -39,41 +39,47 @@ describe('workFraction', () => {
   })
 })
 
-describe('timeProgress', () => {
-  it('stays at 0 until the bar starts, and is full when it ends', () => {
-    expect(timeProgress(0)).toBe(0)
-    expect(timeProgress(t.barStartMs)).toBe(0)
-    expect(timeProgress((t.barStartMs + t.barEndMs) / 2)).toBeCloseTo(0.5)
-    expect(timeProgress(t.barEndMs)).toBe(1)
-    expect(timeProgress(60000)).toBe(1)
+describe('isLogoDue', () => {
+  it('holds the black screen first, even when the art is ready', () => {
+    expect(isLogoDue(t.logoAtMs - 1, true)).toBe(false)
+    expect(isLogoDue(t.logoAtMs, true)).toBe(true)
+  })
+
+  it('waits for the art after the hold', () => {
+    expect(isLogoDue(t.logoAtMs + 500, false)).toBe(false)
+  })
+
+  it('stops waiting for the art at the limit', () => {
+    expect(isLogoDue(t.logoWaitMaxMs, false)).toBe(true)
   })
 })
 
-describe('shownProgress', () => {
-  it('is never ahead of the real work', () => {
-    expect(shownProgress(t.barEndMs, 0.3)).toBe(0.3)
+describe('isFrameDue', () => {
+  it('needs the logo first', () => {
+    expect(isFrameDue(60000, null)).toBe(false)
   })
 
-  it('is never ahead of the show, however fast the loading is', () => {
-    expect(shownProgress((t.barStartMs + t.barEndMs) / 2, 1)).toBeCloseTo(0.5)
-  })
-
-  it('is full at the ceiling, whatever is left to load', () => {
-    expect(shownProgress(t.maxMs, 0.1)).toBe(1)
+  it('follows the logo by its delay', () => {
+    expect(isFrameDue(1000 + t.frameAfterLogoMs - 1, 1000)).toBe(false)
+    expect(isFrameDue(1000 + t.frameAfterLogoMs, 1000)).toBe(true)
   })
 })
 
 describe('isBootDone', () => {
-  it('waits for the floor even when the work is done', () => {
-    expect(isBootDone(t.minMs - 1, 1)).toBe(false)
-    expect(isBootDone(t.minMs, 1)).toBe(true)
+  it('waits for the floor, counted from the logo, even when the work is done', () => {
+    expect(isBootDone(1000 + t.minAfterLogoMs - 1, 1000, 1)).toBe(false)
+    expect(isBootDone(1000 + t.minAfterLogoMs, 1000, 1)).toBe(true)
   })
 
   it('waits for the work after the floor', () => {
-    expect(isBootDone(t.minMs + 1000, 0.9)).toBe(false)
+    expect(isBootDone(1000 + t.minAfterLogoMs + 1000, 1000, 0.9)).toBe(false)
+  })
+
+  it('does not end before the logo has ignited', () => {
+    expect(isBootDone(t.maxMs - 1, null, 1)).toBe(false)
   })
 
   it('ends at the ceiling regardless of the work', () => {
-    expect(isBootDone(t.maxMs, 0)).toBe(true)
+    expect(isBootDone(t.maxMs, null, 0)).toBe(true)
   })
 })

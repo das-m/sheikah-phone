@@ -5,16 +5,17 @@ import {
   BOOT_TIMING,
   BOOT_TIMING_REDUCED,
   isBootDone,
-  shownProgress,
+  isFrameDue,
+  isLogoDue,
   workFraction,
   type GroupProgress,
   type PreloadGroup
 } from '@/lib/boot'
-import { createPreloadTasks, runPreload } from '@/lib/preload'
+import { createPreloadTasks, preloadCritical, runPreload } from '@/lib/preload'
 
 /**
- * Drives the boot screen: a clock for the show, and the real preloading the bar reports on.
- * Stops its frame loop on unmount, and when the boot is done or skipped.
+ * Drives the boot screen: a clock for the show (black, then the logo, then the frame) and the real preloading
+ * it waits for. Stops its frame loop on unmount, and when the boot is done or skipped.
  */
 export function useBoot() {
   const timing = window.matchMedia('(prefers-reduced-motion: reduce)').matches
@@ -31,19 +32,29 @@ export function useBoot() {
   for (const task of tasks) groups[task.group].total += 1
 
   const elapsed = ref(0)
+  const isLogoOn = ref(false)
+  const isFrameOn = ref(false)
   const isFinished = ref(false)
 
   const work = computed(() => workFraction(groups))
-  const progress = computed(() =>
-    isFinished.value ? 1 : shownProgress(elapsed.value, work.value, timing)
-  )
 
   let frame = 0
   let startedAt = 0
+  let logoAt: number | null = null
+  let isLogoReady = false
 
   function tick(now: number) {
     elapsed.value = Math.max(0, now - startedAt)
-    if (isBootDone(elapsed.value, work.value, timing)) {
+
+    if (logoAt === null && isLogoDue(elapsed.value, isLogoReady, timing)) {
+      logoAt = elapsed.value
+      isLogoOn.value = true
+    }
+    if (!isFrameOn.value && isFrameDue(elapsed.value, logoAt, timing)) isFrameOn.value = true
+
+    if (isBootDone(elapsed.value, logoAt, work.value, timing)) {
+      isLogoOn.value = false
+      isFrameOn.value = true
       isFinished.value = true
       return
     }
@@ -54,16 +65,19 @@ export function useBoot() {
   function skip() {
     if (isFinished.value || elapsed.value < timing.skipAfterMs) return
     cancelAnimationFrame(frame)
+    isLogoOn.value = false
+    isFrameOn.value = true
     isFinished.value = true
   }
 
   onMounted(() => {
     startedAt = performance.now()
     frame = requestAnimationFrame(tick)
+    void preloadCritical().then(() => (isLogoReady = true))
     void runPreload(tasks, (group) => (groups[group].done += 1))
   })
 
   onUnmounted(() => cancelAnimationFrame(frame))
 
-  return { progress, isFinished, skip }
+  return { isLogoOn, isFrameOn, isFinished, skip }
 }

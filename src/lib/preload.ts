@@ -35,6 +35,19 @@ const audioUrls = Object.values(
   })
 )
 
+// What the first seconds of the boot show (the logo and the frame): decoded before they appear, so they come
+// in whole instead of flickering in piece by piece.
+const criticalUrls = Object.values(
+  import.meta.glob<string>(
+    ['/src/assets/images/{logo,frame}/**/*.{png,svg}', '!/src/assets/images/**/*-red.*'],
+    {
+      eager: true,
+      query: '?url',
+      import: 'default'
+    }
+  )
+).filter((url) => !url.startsWith('data:'))
+
 const fontSpecs = ['1em OpenSans', 'italic 1em OpenSans', '1em HyliaSerif', '1em Sheikah']
 
 function loadImage(url: string): Promise<unknown> {
@@ -61,6 +74,11 @@ export function createPreloadTasks(router: Router): PreloadTask[] {
     })),
     ...loadRouteChunks(router).map((chunk) => ({ group: 'modules' as const, run: () => chunk }))
   ]
+}
+
+/** Resolves when the art of the logo and the frame is decoded (a failed image counts as settled). */
+export function preloadCritical(): Promise<unknown> {
+  return Promise.all(criticalUrls.map((url) => loadImage(url).catch(() => {})))
 }
 
 /** Runs every task, and reports each one when it settles (a failed one counts as settled). */

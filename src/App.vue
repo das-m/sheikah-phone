@@ -7,6 +7,7 @@ import PhoneFrame from './components/PhoneFrame.vue'
 import SheikahLoader from './components/SheikahLoader.vue'
 import { useOrientationLock } from './composables/useOrientationLock'
 import { useYigaMode } from './composables/useYigaMode'
+import { useYigaLoop } from './composables/useYigaLoop'
 import { useYigaTrigger } from './composables/useYigaTrigger'
 import { isRouteAvailable, loaderVariantFor, type LoaderVariant } from './game/apps'
 import { playClose, playOpen } from './lib/uiSounds'
@@ -16,6 +17,8 @@ const { mode } = useYigaMode()
 // Cold start: the boot screen plays (and preloads) first. The home screen is mounted as it dissolves.
 const isBooting = ref(true)
 const isBooted = ref(false)
+// The frame stays dark until the boot draws it in.
+const isFrameOn = ref(false)
 
 // loader between apps
 // The logo arrives in 0.75 s, the pattern flickers up between 0.9 s and 1.8 s: this keeps the finished logo,
@@ -61,6 +64,7 @@ useOrientationLock()
 
 // Yiga mode: flip + shake in the zone; every mode switch plays the longer "hack" transition
 useYigaTrigger()
+useYigaLoop()
 watch(mode, (value) => {
   if (!isBooted.value) return
   hack.value = value === 'yiga' ? 'to-yiga' : 'to-sheikah'
@@ -71,7 +75,7 @@ watch(mode, (value) => {
 
 <template>
   <div class="Phone">
-    <PhoneFrame />
+    <PhoneFrame :on="isFrameOn" />
 
     <InstallGate />
 
@@ -82,7 +86,12 @@ watch(mode, (value) => {
       <SheikahLoader :show="showLoader" :hack="hack" :variant="loaderVariant" />
       <!-- keyed by the mode: the screen is built again after a switch, so it comes up after the transition -->
       <RouterView v-if="isBooted" :key="mode" />
-      <BootScreen v-if="isBooting" @ready="isBooted = true" @done="isBooting = false" />
+      <BootScreen
+        v-if="isBooting"
+        @frame="isFrameOn = true"
+        @ready="isBooted = true"
+        @done="isBooting = false"
+      />
     </main>
   </div>
 </template>

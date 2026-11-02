@@ -1,6 +1,7 @@
 // Pacing of the boot screen. Pure, so it is testable without a browser.
-// The show has a floor (`minMs`, so it never flashes by) and a ceiling (`maxMs`, so a slow connection never
-// holds the player back), and in between it waits for the real preloading to finish.
+// The show starts black. The logo ignites once its art is loaded and decoded (so it never flickers in), the frame
+// of the slate draws in after it, and the show has a floor (`minAfterLogoMs`, so it never flashes by) and a ceiling
+// (`maxMs`, so a slow connection never holds the player back); in between it waits for the real preloading.
 
 export type PreloadGroup = 'fonts' | 'images' | 'audio' | 'modules'
 
@@ -10,12 +11,14 @@ export interface GroupProgress {
 }
 
 export interface BootTiming {
-  /** The bar starts to fill (the logo has ignited by then). */
-  barStartMs: number
-  /** The bar is full at the earliest here, however fast the loading is. */
-  barEndMs: number
-  /** Earliest end of the boot. */
-  minMs: number
+  /** The screen stays black at least this long before the logo ignites. */
+  logoAtMs: number
+  /** The logo ignites here at the latest, even if its art is still loading. */
+  logoWaitMaxMs: number
+  /** The frame starts to draw in this long after the logo ignited (the eye has settled by then). */
+  frameAfterLogoMs: number
+  /** Earliest end of the boot, counted from the logo's ignition. */
+  minAfterLogoMs: number
   /** Latest end of the boot, whatever is still loading (it keeps loading in the background). */
   maxMs: number
   /** From here on a tap skips the rest. */
@@ -23,23 +26,25 @@ export interface BootTiming {
 }
 
 export const BOOT_TIMING: BootTiming = {
-  barStartMs: 1000,
-  barEndMs: 5000,
-  minMs: 6000,
+  logoAtMs: 900,
+  logoWaitMaxMs: 3000,
+  frameAfterLogoMs: 1800,
+  minAfterLogoMs: 5000,
   maxMs: 10000,
-  skipAfterMs: 2000
+  skipAfterMs: 2500
 }
 
 /** For `prefers-reduced-motion`: the same steps, without the wait. */
 export const BOOT_TIMING_REDUCED: BootTiming = {
-  barStartMs: 0,
-  barEndMs: 800,
-  minMs: 1500,
+  logoAtMs: 0,
+  logoWaitMaxMs: 1500,
+  frameAfterLogoMs: 300,
+  minAfterLogoMs: 1000,
   maxMs: 4000,
   skipAfterMs: 0
 }
 
-/** How much of the bar each group of work is worth: the images are many, the app chunks are heavy. */
+/** How much of the real work each group is worth: the images are many, the app chunks are heavy. */
 export const WORK_WEIGHTS: Record<PreloadGroup, number> = {
   fonts: 0.1,
   images: 0.4,
@@ -64,17 +69,26 @@ export function workFraction(
   return sum > 0 ? done / sum : 1
 }
 
-/** The part of the bar that is pure show: how far it may be at this time. */
-export function timeProgress(elapsedMs: number, timing = BOOT_TIMING): number {
-  return clamp01((elapsedMs - timing.barStartMs) / (timing.barEndMs - timing.barStartMs))
+/** Time to ignite the logo: after the black hold, once its art is ready (or the wait has run out). */
+export function isLogoDue(elapsedMs: number, logoReady: boolean, timing = BOOT_TIMING): boolean {
+  return elapsedMs >= timing.logoAtMs && (logoReady || elapsedMs >= timing.logoWaitMaxMs)
 }
 
-/** The bar: never ahead of the real work, and never ahead of the show. */
-export function shownProgress(elapsedMs: number, work: number, timing = BOOT_TIMING): number {
-  if (elapsedMs >= timing.maxMs) return 1
-  return Math.min(clamp01(work), timeProgress(elapsedMs, timing))
+/** Time to draw the frame in; `logoAtMs` is when the logo ignited (null: not yet). */
+export function isFrameDue(
+  elapsedMs: number,
+  logoAtMs: number | null,
+  timing = BOOT_TIMING
+): boolean {
+  return logoAtMs !== null && elapsedMs >= logoAtMs + timing.frameAfterLogoMs
 }
 
-export function isBootDone(elapsedMs: number, work: number, timing = BOOT_TIMING): boolean {
-  return elapsedMs >= timing.maxMs || (elapsedMs >= timing.minMs && work >= 1)
+export function isBootDone(
+  elapsedMs: number,
+  logoAtMs: number | null,
+  work: number,
+  timing = BOOT_TIMING
+): boolean {
+  if (elapsedMs >= timing.maxMs) return true
+  return logoAtMs !== null && elapsedMs >= logoAtMs + timing.minAfterLogoMs && work >= 1
 }
