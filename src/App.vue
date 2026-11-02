@@ -5,9 +5,10 @@ import BootScreen from './components/BootScreen.vue'
 import InstallGate from './components/InstallGate.vue'
 import PhoneFrame from './components/PhoneFrame.vue'
 import SheikahLoader from './components/SheikahLoader.vue'
+import { useOrientationLock } from './composables/useOrientationLock'
 import { useYigaMode } from './composables/useYigaMode'
 import { useYigaTrigger } from './composables/useYigaTrigger'
-import { isRouteAvailable } from './game/apps'
+import { isRouteAvailable, loaderVariantFor, type LoaderVariant } from './game/apps'
 import { playClose, playOpen } from './lib/uiSounds'
 
 const { mode } = useYigaMode()
@@ -25,6 +26,8 @@ const LOADER_MS = 2200
 const HACK_MS = 3600
 const showLoader = ref(false)
 const hack = ref<'' | 'to-yiga' | 'to-sheikah'>('')
+// The look of the loader for the app that opens or closes (the lens is purple). Only changed together with `show()`.
+const loaderVariant = ref<LoaderVariant>('')
 const route = useRoute()
 
 watch(
@@ -36,6 +39,8 @@ watch(
     if (!isRouteAvailable(oldPath, mode.value)) return
 
     hack.value = ''
+    // Leaving an app plays its loader too, so the lens closes in purple as well.
+    loaderVariant.value = loaderVariantFor(route.path) || loaderVariantFor(oldPath)
     show()
     if (route.name == 'home') playClose(mode.value)
     else playOpen(mode.value)
@@ -52,11 +57,14 @@ function show(ms = LOADER_MS) {
   }, ms)
 }
 
+useOrientationLock()
+
 // Yiga mode: flip + shake in the zone; every mode switch plays the longer "hack" transition
 useYigaTrigger()
 watch(mode, (value) => {
   if (!isBooted.value) return
   hack.value = value === 'yiga' ? 'to-yiga' : 'to-sheikah'
+  loaderVariant.value = ''
   show(HACK_MS)
 })
 </script>
@@ -71,7 +79,7 @@ watch(mode, (value) => {
       :class="['Phone-main', { 'Phone-main--booting': isBooting, 'Phone-main--hacking': hack }]"
       id="main"
     >
-      <SheikahLoader :show="showLoader" :hack="hack" />
+      <SheikahLoader :show="showLoader" :hack="hack" :variant="loaderVariant" />
       <!-- keyed by the mode: the screen is built again after a switch, so it comes up after the transition -->
       <RouterView v-if="isBooted" :key="mode" />
       <BootScreen v-if="isBooting" @ready="isBooted = true" @done="isBooting = false" />

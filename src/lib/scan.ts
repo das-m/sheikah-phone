@@ -53,6 +53,17 @@ export function quadCenter(quad: Quad): Point {
   }
 }
 
+export interface Circle {
+  x: number
+  y: number
+  r: number
+}
+
+/** Whether a point lies in a circle (the edge counts as inside). */
+export function isInsideCircle(point: Point, circle: Circle): boolean {
+  return Math.hypot(point.x - circle.x, point.y - circle.y) <= circle.r
+}
+
 /** Area of a quad (shoelace), to tell the nearest of several codes apart. */
 export function quadArea(quad: Quad): number {
   let sum = 0

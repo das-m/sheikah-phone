@@ -6,6 +6,7 @@ import {
   createFailureCounter,
   createTracker,
   homographyMatrix3d,
+  isInsideCircle,
   mapQuad,
   normalizeCode,
   pickDetection,
@@ -76,6 +77,20 @@ describe('coverMap', () => {
     const [a, , c] = mapQuad(square(100, 50, 10), map)
     expect(a).toEqual({ x: 200, y: 100 })
     expect(c).toEqual({ x: 220, y: 120 })
+  })
+})
+
+describe('isInsideCircle', () => {
+  const circle = { x: 100, y: 50, r: 40 }
+
+  it('is true inside and on the edge', () => {
+    expect(isInsideCircle({ x: 100, y: 50 }, circle)).toBe(true)
+    expect(isInsideCircle({ x: 140, y: 50 }, circle)).toBe(true)
+  })
+
+  it('is false outside, also in the corner of the bounding box', () => {
+    expect(isInsideCircle({ x: 141, y: 50 }, circle)).toBe(false)
+    expect(isInsideCircle({ x: 135, y: 85 }, circle)).toBe(false)
   })
 })
 

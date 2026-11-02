@@ -1,9 +1,15 @@
 <script setup lang="ts">
 import ScanlineOverlay from '@/components/ScanlineOverlay.vue'
+import type { LoaderVariant } from '@/game/apps'
 
 // `hack`: the switch between the two modes, a "hack" of the device (see the hack part of the styles).
 // It takes the direction, since the colors and the logo turn from the old mode to the new one.
-defineProps<{ show?: boolean; hack?: '' | 'to-yiga' | 'to-sheikah' }>()
+// `variant`: the look of an app's own loader. 'lens' is the Scanner app's: the same logo and timing, in purple.
+defineProps<{
+  show?: boolean
+  hack?: '' | 'to-yiga' | 'to-sheikah'
+  variant?: LoaderVariant
+}>()
 </script>
 
 <template>
@@ -11,7 +17,14 @@ defineProps<{ show?: boolean; hack?: '' | 'to-yiga' | 'to-sheikah' }>()
   <Transition name="loader" :duration="{ enter: 750, leave: 650 }">
     <div
       v-if="show"
-      :class="['SheikahLoader', { 'SheikahLoader--hack': hack, [`SheikahLoader--${hack}`]: hack }]"
+      :class="[
+        'SheikahLoader',
+        {
+          'SheikahLoader--hack': hack,
+          [`SheikahLoader--${hack}`]: hack,
+          [`SheikahLoader--${variant}`]: variant && !hack
+        }
+      ]"
     >
       <div class="SheikahLoader-logo">
         <div class="SheikahLoader-logo-ring SheikahLoader-logo-layer"></div>
@@ -294,6 +307,26 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
   }
 }
 
+// The lens (Scanner app): the logo is tinted like Yiga mode's, but to purple (blue is ~192deg, the lens purple ~263deg;
+// by eye, tune on a phone), the backdrop is purple, and the ring pings a second time on entry, as if the lens focused.
+// Timing is the default one, so nothing outside this block changes.
+.SheikahLoader--lens {
+  --lens-hue: 70deg;
+
+  background: radial-gradient(circle at center, rgba(34, 12, 66, 0.65), rgba(0, 0, 0, 0.8) 85%);
+
+  .SheikahLoader-logo {
+    filter: hue-rotate(var(--lens-hue));
+  }
+
+  // The second ping has no fill, so it does not hold the ring's opacity before it starts.
+  &.loader-enter-active .SheikahLoader-logo-ring {
+    animation:
+      ring-ping 0.8s 0.3s ease-out both,
+      ring-ping 0.8s 1.1s ease-out;
+  }
+}
+
 // The "hack" (switch between the modes): the device is being taken over. After the logo has arrived in the old
 // colors, scanlines come up and the logo glitches in short bursts, the whole logo (eye, decor, pattern) turns
 // over (like an inverted cross) while the colors fade across, and the backdrop is tinted red (or back).
@@ -464,6 +497,10 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
   }
 
   .SheikahLoader--hack::before {
+    animation: none;
+  }
+
+  .SheikahLoader--lens.loader-enter-active .SheikahLoader-logo-ring {
     animation: none;
   }
 

@@ -1,5 +1,17 @@
 import { describe, expect, it } from 'vitest'
-import { isRouteAvailable } from './apps'
+import { isRouteAvailable, loaderVariantFor } from './apps'
+
+describe('loaderVariantFor', () => {
+  it('gives the scanner its own loader', () => {
+    expect(loaderVariantFor('/scanner')).toBe('lens')
+  })
+
+  it('uses the default loader for other apps, the home screen and unknown routes', () => {
+    expect(loaderVariantFor('/map')).toBe('')
+    expect(loaderVariantFor('/')).toBe('')
+    expect(loaderVariantFor('/nope')).toBe('')
+  })
+})
 
 describe('isRouteAvailable', () => {
   it('only allows an app in its own mode', () => {

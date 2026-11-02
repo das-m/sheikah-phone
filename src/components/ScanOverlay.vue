@@ -8,6 +8,7 @@ import {
   coverMap,
   createTracker,
   homographyMatrix3d,
+  isInsideCircle,
   mapQuad,
   pickDetection,
   quadCenter
@@ -26,6 +27,8 @@ const props = defineProps<{
   scan: ScanState
   /** Scanning rests (the modal is open): the empty readings it publishes then do not mean the code left the view. */
   paused?: boolean
+  /** The round view the camera is shown through (the lens): only codes whose center is inside it count. */
+  region?: HTMLElement | null
 }>()
 
 const emit = defineEmits<{
@@ -62,6 +65,25 @@ function hide() {
   if (isConfirmed.value) isConfirmed.value = false
 }
 
+/** The lens as a circle in the overlay's px (and the video's mapping to them), or null when the view is not round. */
+function lensCircle(root: HTMLElement, video: HTMLVideoElement) {
+  const region = props.region
+  if (!region) return null
+  const rect = region.getBoundingClientRect()
+  const rootRect = root.getBoundingClientRect()
+  return {
+    map: coverMap(
+      { width: video.videoWidth, height: video.videoHeight },
+      { width: root.clientWidth, height: root.clientHeight }
+    ),
+    circle: {
+      x: rect.left - rootRect.left + rect.width / 2,
+      y: rect.top - rootRect.top + rect.height / 2,
+      r: Math.min(rect.width, rect.height) / 2
+    }
+  }
+}
+
 function tick(now: number) {
   frame = requestAnimationFrame(tick)
   const root = rootEl.value
@@ -73,7 +95,13 @@ function tick(now: number) {
   if (props.scan.seq !== seenSeq) {
     seenSeq = props.scan.seq
     // Codes that are not ours (a URL, a foreign QR) get no overlay. TODO(multi): follow every known code.
-    const known = props.scan.detections.filter((d) => findTarget(d.value))
+    // A code outside the lens is not seen by the player, so it must not fill the hold bar or open unseen.
+    const lens = lensCircle(root, video)
+    const known = props.scan.detections.filter(
+      (d) =>
+        findTarget(d.value) &&
+        (!lens || isInsideCircle(quadCenter(mapQuad(d.corners, lens.map)), lens.circle))
+    )
     tracker.update(pickDetection(known, tracker.value), now)
     // A reading without any of our codes: the last one that opened is gone, the next one may open again.
     if (known.length === 0 && !props.paused) isArmed = true

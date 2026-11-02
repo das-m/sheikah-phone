@@ -2,6 +2,7 @@
 import { computed, onUnmounted, ref, watch } from 'vue'
 
 import BackButton from '@/components/BackButton.vue'
+import LensRim from '@/components/LensRim.vue'
 import ScanlineOverlay from '@/components/ScanlineOverlay.vue'
 import ScanModal from '@/components/ScanModal.vue'
 import ScanOverlay from '@/components/ScanOverlay.vue'
@@ -31,6 +32,8 @@ const QUIET_AFTER_MODAL_MS = 1500
 useFrameGlow('var(--color-purple)')
 
 const videoEl = ref<HTMLVideoElement | null>(null)
+// The round lens box: the rim is drawn in it, and codes outside it do not count (ScanOverlay `region`).
+const lensEl = ref<HTMLElement | null>(null)
 // The codes on the cards are small, so a module needs as many pixels as it can get: 1080p. If the frame rate of the
 // scanner drops on a phone, go back to 1280x720 (a smaller frame is cheaper to scan).
 const { isReady, hasFailed } = useCamera(videoEl, {
@@ -98,19 +101,25 @@ onUnmounted(() => {
   <Transition name="fade" appear>
     <div class="App">
       <BackButton />
-      <div class="App-camera" v-if="!hasFailed">
-        <div class="App-camera-icon"></div>
-        <video ref="videoEl" autoplay playsinline muted :style="{ filter: scanFilter }"></video>
-        <ScanlineOverlay class="App-scanlines" />
+      <template v-if="!hasFailed">
+        <!-- The camera keeps its full-screen box (the overlay's maths depend on it) and is cut to the lens round. -->
+        <div class="App-camera">
+          <video ref="videoEl" autoplay playsinline muted :style="{ filter: scanFilter }"></video>
+          <ScanlineOverlay class="App-scanlines" />
+        </div>
+        <div ref="lensEl" class="App-lens">
+          <LensRim :paused="modal !== null" />
+        </div>
         <ScanOverlay
           class="App-overlay"
           :video="videoEl"
           :scan="scan"
           :paused="modal !== null"
+          :region="lensEl"
           @confirm="onConfirm"
           @open="run"
         />
-      </div>
+      </template>
       <div class="App-camera App-camera--disabled" v-else>
         <div class="App-camera-icon App-camera-icon--disabled"></div>
       </div>
@@ -150,8 +159,33 @@ onUnmounted(() => {
   width: 100%;
   height: 100%;
   position: relative;
+  // The lens: a circle as big as the free height (or the width, in a narrow window), centered between the frame art.
+  // The camera is cut to the same circle, so both are derived from these three values.
+  --lens-d: min(100vw, calc(100vh - var(--frame-top) - var(--frame-bottom)));
+  --lens-top: calc(
+    (100% - var(--frame-top) - var(--frame-bottom) - var(--lens-d)) / 2 + var(--frame-top)
+  );
+  --lens-cy: calc(var(--lens-top) + var(--lens-d) / 2);
+  background: radial-gradient(circle at 50% var(--lens-cy), #1c1040, #07040f 80%);
 
-  @include camera.stage;
+  @include camera.stage($scope: false);
+
+  &-camera {
+    clip-path: circle(calc(var(--lens-d) / 2) at 50% var(--lens-cy));
+    // The lens opens like an iris once the loader is done (the same clip-path trick as the map's reveal).
+    animation: lens-open 0.9s var(--screen-delay) ease-out both;
+  }
+
+  &-lens {
+    position: absolute;
+    z-index: 30;
+    top: var(--lens-top);
+    left: 50%;
+    width: var(--lens-d);
+    height: var(--lens-d);
+    transform: translateX(-50%);
+    pointer-events: none;
+  }
 
   &-scanlines {
     z-index: 20;
@@ -161,12 +195,12 @@ onUnmounted(() => {
     z-index: 35;
   }
 
+  // Beside the lens, in the lower right corner, so they never cover it.
   &-controls {
     position: absolute;
     z-index: 40;
-    left: 50%;
+    right: calc(var(--frame-corner-br) + 0.5rem);
     bottom: calc(var(--frame-bottom) + 0.5rem);
-    transform: translateX(-50%);
     display: flex;
     gap: 1rem;
   }
@@ -174,9 +208,8 @@ onUnmounted(() => {
   &-entry {
     position: absolute;
     z-index: 40;
-    left: 50%;
+    right: calc(var(--frame-corner-br) + 0.5rem);
     bottom: calc(var(--frame-bottom) + 4.5rem);
-    transform: translateX(-50%);
     display: flex;
     gap: 0.8rem;
 
@@ -200,11 +233,10 @@ onUnmounted(() => {
   &-note {
     position: absolute;
     z-index: 40;
-    left: 0;
-    right: 0;
+    right: calc(var(--frame-corner-br) + 0.5rem);
     bottom: calc(var(--frame-bottom) + 8rem);
     margin: 0;
-    text-align: center;
+    text-align: right;
     color: var(--color-red);
     text-shadow: 0 0 0.5rem var(--color-base);
   }
@@ -213,6 +245,18 @@ onUnmounted(() => {
     padding: 0.5em 1.2em;
     font-size: 0.9em;
     @include button.framed(0.6);
+  }
+}
+
+@keyframes lens-open {
+  from {
+    clip-path: circle(0 at 50% var(--lens-cy));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .App-camera {
+    animation: none;
   }
 }
 </style>
