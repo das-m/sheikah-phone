@@ -13,8 +13,10 @@ import type { LatLng } from '@/lib/geo'
 // Everything that is placed on the map lives in this file, the map itself (MapApp.vue) only draws it.
 // There are three kinds of markers, `minZoom` / `maxZoom` are optional on all of them (the marker fades in and out
 // around those zoom levels; the map goes from zoom 11 to street level, the city is about 15-17):
-//  - `pois`: a point with an icon.
-//  - `areas`: a larger but specific place. The dotted ring is drawn with the real `radiusMeters` and grows with the zoom.
+//  - `pois`: a point with an icon. `level` 1 (default) is a main place, shown from zoom `poiLevels[1].minZoom`; level 2
+//    is a small one, shown later (`poiLevels[2].minZoom`) and drawn smaller. A POI's own `minZoom` / `maxZoom` win.
+//  - `areas`: a larger but specific place. The dotted outline is drawn with the real `radiusMeters` and grows with the
+//    zoom; its ring icon and title fade out above `labelMaxZoom` (default `areaLabelMaxZoom`), the outline stays.
 //  - `regions`: big labels for whole regions (fantasy names). `name` is set in the Hylia serif, `caption` below it in
 //    the Sheikah runes (the font turns normal letters into runes, so write it like a normal word).
 export interface Visibility {
@@ -22,10 +24,21 @@ export interface Visibility {
   maxZoom?: number
 }
 
+/** Zoom at which a level shows up and its size relative to the full size (level 1). */
+export const poiLevels = {
+  1: { minZoom: 12.5, scale: 1 },
+  2: { minZoom: 14.5, scale: 0.7 }
+}
+
+/** Above this zoom an area's ring icon and title are hidden, the outline is big enough by then. */
+export const areaLabelMaxZoom = 17
+
 export interface Poi extends Visibility {
   title: string
   position: LatLng
   icon: string
+  /** 1 (default): main place. 2: small place, shown later and smaller. */
+  level?: keyof typeof poiLevels
 }
 
 export interface Area extends Visibility {
@@ -34,6 +47,8 @@ export interface Area extends Visibility {
   radiusMeters: number
   /** Optional small icon in the center of the ring. */
   icon?: string
+  /** Zoom above which the ring icon, the icon and the title are hidden. Default: `areaLabelMaxZoom`. */
+  labelMaxZoom?: number
 }
 
 export interface Region extends Visibility {
@@ -99,7 +114,8 @@ export const pois: Poi[] = [
       lat: 48.902293,
       lng: 9.193812
     },
-    icon: markerIconGate
+    icon: markerIconGate,
+    level: 2
   },
   {
     title: 'Stuttgarter Torhaus',
@@ -107,7 +123,8 @@ export const pois: Poi[] = [
       lat: 48.888887,
       lng: 9.193957
     },
-    icon: markerIconGate
+    icon: markerIconGate,
+    level: 2
   },
   {
     title: 'Schorndorfer Torhaus',
@@ -115,7 +132,8 @@ export const pois: Poi[] = [
       lat: 48.895806,
       lng: 9.203389
     },
-    icon: markerIconGate
+    icon: markerIconGate,
+    level: 2
   },
   {
     title: 'Pflugfelder Torhaus',
@@ -123,7 +141,8 @@ export const pois: Poi[] = [
       lat: 48.89083,
       lng: 9.183373
     },
-    icon: markerIconGate
+    icon: markerIconGate,
+    level: 2
   },
   {
     title: 'Aldinger Torhaus',
@@ -131,7 +150,8 @@ export const pois: Poi[] = [
       lat: 48.886904,
       lng: 9.203264
     },
-    icon: markerIconGate
+    icon: markerIconGate,
+    level: 2
   },
   {
     title: 'Asperger Torhaus',
@@ -139,7 +159,8 @@ export const pois: Poi[] = [
       lat: 48.897503,
       lng: 9.182989
     },
-    icon: markerIconGate
+    icon: markerIconGate,
+    level: 2
   },
   {
     title: 'Marbacher Torhaus',
@@ -147,7 +168,8 @@ export const pois: Poi[] = [
       lat: 48.90254995369686,
       lng: 9.20048606997646
     },
-    icon: markerIconGate
+    icon: markerIconGate,
+    level: 2
   },
   {
     title: 'Feenquelle',
@@ -155,7 +177,8 @@ export const pois: Poi[] = [
       lat: 48.910015,
       lng: 9.214296
     },
-    icon: markerIconFountain
+    icon: markerIconFountain,
+    level: 2
   },
   {
     title: 'Quelle der Macht',
@@ -163,7 +186,8 @@ export const pois: Poi[] = [
       lat: 48.9001518187164,
       lng: 9.195957220987154
     },
-    icon: markerIconFountain
+    icon: markerIconFountain,
+    level: 2
   },
   {
     title: 'Quelle des Ursprungs',
@@ -171,7 +195,8 @@ export const pois: Poi[] = [
       lat: 48.89743145785699,
       lng: 9.191552095298437
     },
-    icon: markerIconFountain
+    icon: markerIconFountain,
+    level: 2
   },
   {
     title: 'Quelle der Träume',
@@ -179,7 +204,8 @@ export const pois: Poi[] = [
       lat: 48.8930817,
       lng: 9.1928228
     },
-    icon: markerIconFountain
+    icon: markerIconFountain,
+    level: 2
   },
   {
     title: 'Quelle des Waldes',
@@ -187,7 +213,8 @@ export const pois: Poi[] = [
       lat: 48.907568,
       lng: 9.1947786
     },
-    icon: markerIconFountain
+    icon: markerIconFountain,
+    level: 2
   },
   {
     title: 'Quelle der Weisheit',
@@ -195,7 +222,8 @@ export const pois: Poi[] = [
       lat: 48.91474712899295,
       lng: 9.211257210034384
     },
-    icon: markerIconFountain
+    icon: markerIconFountain,
+    level: 2
   },
   {
     title: 'Stall der Prinzessin',
@@ -259,7 +287,8 @@ export const pois: Poi[] = [
       lat: 48.892308609476544,
       lng: 9.185691454480875
     },
-    icon: markerIconStable
+    icon: markerIconStable,
+    level: 2
   },
   {
     title: 'Bahnhof Favoritepark',
@@ -267,7 +296,8 @@ export const pois: Poi[] = [
       lat: 48.9056801,
       lng: 9.187429
     },
-    icon: markerIconStable
+    icon: markerIconStable,
+    level: 2
   },
   {
     title: 'Bahnhof Osterholz',
@@ -275,7 +305,8 @@ export const pois: Poi[] = [
       lat: 48.8976333338004,
       lng: 9.163368967922386
     },
-    icon: markerIconStable
+    icon: markerIconStable,
+    level: 2
   }
 ]
 

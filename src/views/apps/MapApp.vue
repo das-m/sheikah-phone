@@ -14,7 +14,7 @@ import { useGeolocation } from '@/composables/useGeolocation'
 import { useHeading } from '@/composables/useHeading'
 import { useSensorBeeper } from '@/composables/useSensorBeeper'
 import { useSensorMode } from '@/composables/useSensorMode'
-import { areas, pois, regions } from '@/game/markers'
+import { areaLabelMaxZoom, areas, poiLevels, pois, regions } from '@/game/markers'
 import type { Area, Poi, Region, Visibility } from '@/game/markers'
 import { playSound } from '@/lib/audio'
 import { metersPerPixel } from '@/lib/geo'
@@ -87,31 +87,39 @@ function createPoi(poi: Poi) {
   el.alt = poi.title
   el.title = poi.title
   el.className = 'App-map-poi'
-  addMarker(poi.position, poi, el)
+  const level = poiLevels[poi.level ?? 1]
+  el.style.setProperty('--scale', String(level.scale))
+  addMarker(poi.position, { minZoom: level.minZoom, ...poi }, el)
 }
 
-// The dotted outline has the real radius, so it grows with the zoom; the ring icon (with the optional icon inside
-// of it) and the title stay the same size.
+// The dotted outline has the real radius, so it grows with the zoom; the label (ring icon with the optional icon
+// inside of it, and the title) stays the same size and fades out when zoomed in far.
 function createArea(area: Area) {
   const el = document.createElement('div')
   el.className = 'App-map-area'
+  const label = document.createElement('div')
+  label.className = 'App-map-area-label'
+  el.appendChild(label)
   const ring = document.createElement('img')
   ring.src = markerIconArea
   ring.alt = ''
   ring.className = 'App-map-area-ring'
-  el.appendChild(ring)
+  label.appendChild(ring)
   if (area.icon) {
     const icon = document.createElement('img')
     icon.src = area.icon
     icon.alt = ''
     icon.className = 'App-map-area-icon'
-    el.appendChild(icon)
+    label.appendChild(icon)
   }
   const title = document.createElement('span')
   title.className = 'App-map-area-title'
   title.textContent = area.title
-  el.appendChild(title)
+  label.appendChild(title)
   addMarker(area.position, area, el, (zoom) => {
+    const labelOpacity = zoomOpacity(zoom, { maxZoom: area.labelMaxZoom ?? areaLabelMaxZoom })
+    label.style.opacity = String(labelOpacity)
+    label.style.visibility = labelOpacity === 0 ? 'hidden' : 'visible'
     const size = (2 * area.radiusMeters) / metersPerPixel(area.position.lat, zoom)
     // Once the outline is wider than several screens it is not drawn (a huge layer is costly on a phone).
     const huge = size > MAX_AREA_OUTLINE_PX
@@ -438,9 +446,10 @@ $settle-delay: 0.6s;
       }
     }
 
+    // --scale comes from the POI level (markers.ts)
     :deep(.App-map-poi) {
-      width: 32px;
-      height: 32px;
+      width: calc(32px * var(--scale, 1));
+      height: calc(32px * var(--scale, 1));
     }
 
     // Area: dotted outline with the real radius (--size is set from the zoom), ring icon and title in the middle.
@@ -465,6 +474,12 @@ $settle-delay: 0.6s;
       border: none;
       background: none;
       box-shadow: none;
+    }
+
+    // ring icon, icon and title, faded together when zoomed in far
+    :deep(.App-map-area-label) {
+      position: absolute;
+      inset: 0;
     }
 
     :deep(.App-map-area-ring),

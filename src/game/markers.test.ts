@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { areas, pois, regions } from './markers'
+import { areaLabelMaxZoom, areas, poiLevels, pois, regions } from './markers'
 import type { Visibility } from './markers'
 
 // markers.ts is edited by hand, so catch the usual slips: swapped coordinates, empty names, broken zoom ranges.
@@ -23,5 +23,16 @@ describe('markers', () => {
 
   it('gives every area a positive radius', () => {
     for (const area of areas) expect(area.radiusMeters).toBeGreaterThan(0)
+  })
+
+  it('shows level 2 POIs later and smaller than level 1', () => {
+    expect(poiLevels[2].minZoom).toBeGreaterThan(poiLevels[1].minZoom)
+    expect(poiLevels[2].scale).toBeLessThan(poiLevels[1].scale)
+    for (const poi of pois) expect([undefined, 1, 2]).toContain(poi.level)
+  })
+
+  it('keeps the area label zoom inside the map zoom range (11 and up)', () => {
+    expect(areaLabelMaxZoom).toBeGreaterThan(11)
+    for (const area of areas) expect(area.labelMaxZoom ?? areaLabelMaxZoom).toBeGreaterThan(11)
   })
 })
