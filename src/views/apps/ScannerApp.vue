@@ -27,11 +27,12 @@ const QUIET_AFTER_MODAL_MS = 1500
 useFrameGlow('var(--color-purple)')
 
 const videoEl = ref<HTMLVideoElement | null>(null)
-// QR codes read fine at 720p, and a smaller frame is cheaper to scan.
+// The codes on the cards are small, so a module needs as many pixels as it can get: 1080p. If the frame rate of the
+// scanner drops on a phone, go back to 1280x720 (a smaller frame is cheaper to scan).
 const { isReady, hasFailed } = useCamera(videoEl, {
   facingMode: { ideal: 'environment' },
-  width: { ideal: 1280 },
-  height: { ideal: 720 }
+  width: { ideal: 1920 },
+  height: { ideal: 1080 }
 })
 
 const { modal, run, close } = useScanAction()
@@ -107,6 +108,7 @@ onUnmounted(() => {
           v-model="typedCode"
           class="App-entry-input"
           type="text"
+          inputmode="numeric"
           autocomplete="off"
           autocapitalize="off"
           spellcheck="false"

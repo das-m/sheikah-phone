@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
+  boxFromLayout,
+  boxQuad,
   coverMap,
   createFailureCounter,
   createTracker,
@@ -9,7 +11,6 @@ import {
   pickDetection,
   quadArea,
   quadCenter,
-  scaleQuad,
   type Point,
   type Quad,
   type ScanDetection
@@ -78,16 +79,94 @@ describe('coverMap', () => {
   })
 })
 
-describe('quadCenter / scaleQuad', () => {
+describe('quadCenter', () => {
   it('finds the center', () => {
-    expect(quadCenter(square(10, 20, 10))).toEqual({ x: 15, y: 25 })
+    expect(quadCenter(square(10, 20, 10))).toEqual({ x: 15, y: 20 + 5 })
+  })
+})
+
+describe('boxQuad', () => {
+  it('maps a box around an upright code by plain scaling', () => {
+    // a 10 px code at (10, 10); a box from -1 to 2 code widths on both axes reaches from (0, 0) to (30, 30)
+    const q = boxQuad(square(10, 10, 10), { x: -1, y: -1, width: 3, height: 3 })!
+    expect(q[0]).toEqual({ x: 0, y: 0 })
+    expect(q[1]).toEqual({ x: 30, y: 0 })
+    expect(q[2]).toEqual({ x: 30, y: 30 })
+    expect(q[3]).toEqual({ x: 0, y: 30 })
   })
 
-  it('grows a quad about its center', () => {
-    const grown = scaleQuad(square(10, 10, 10), 2)
-    expect(grown[0]).toEqual({ x: 5, y: 5 })
-    expect(grown[2]).toEqual({ x: 25, y: 25 })
-    expect(quadCenter(grown)).toEqual({ x: 15, y: 15 })
+  it('is the code itself for the unit box', () => {
+    const quad: Quad = [
+      { x: 100, y: 50 },
+      { x: 220, y: 70 },
+      { x: 200, y: 190 },
+      { x: 90, y: 160 }
+    ]
+    const q = boxQuad(quad, { x: 0, y: 0, width: 1, height: 1 })!
+    q.forEach((p, i) => {
+      expect(p.x).toBeCloseTo(quad[i].x, 6)
+      expect(p.y).toBeCloseTo(quad[i].y, 6)
+    })
+  })
+
+  it('follows the rotation of the code: a card below the code is below it in the code, not on screen', () => {
+    // the code turned half a turn (its corners in the opposite order on screen): "below the code" is now above it
+    const turned: Quad = [
+      { x: 20, y: 20 },
+      { x: 10, y: 20 },
+      { x: 10, y: 10 },
+      { x: 20, y: 10 }
+    ]
+    const q = boxQuad(turned, { x: 0, y: 1, width: 1, height: 2 })!
+    expect(q[0]).toEqual({ x: 20, y: 10 })
+    expect(q[2]).toEqual({ x: 10, y: -10 })
+  })
+
+  it('keeps the perspective: the nearer part of a bigger box grows faster than plain scaling', () => {
+    // a code twice as wide at the bottom (nearer) as at the top
+    const quad: Quad = [
+      { x: 45, y: 0 },
+      { x: 55, y: 0 },
+      { x: 60, y: 10 },
+      { x: 40, y: 10 }
+    ]
+    // 1.5 code heights down: the width there is 1 / (1 - 0.5 * 1.5) = 4x the top, the row is at y = 30 (not 15)
+    const q = boxQuad(quad, { x: 0, y: 0, width: 1, height: 1.5 })!
+    expect(q[3].x).toBeCloseTo(30, 6)
+    expect(q[3].y).toBeCloseTo(30, 6)
+    expect(q[2].x).toBeCloseTo(70, 6)
+    expect(q[2].y).toBeCloseTo(30, 6)
+  })
+
+  it('refuses a degenerate quad', () => {
+    const line: Quad = [
+      { x: 0, y: 0 },
+      { x: 1, y: 1 },
+      { x: 2, y: 2 },
+      { x: 3, y: 3 }
+    ]
+    expect(boxQuad(line, { x: 0, y: 0, width: 1, height: 1 })).toBeNull()
+  })
+})
+
+describe('boxFromLayout', () => {
+  const card = { width: 63.5, height: 88 }
+
+  it('centers the code on the card and measures everything in code widths', () => {
+    const box = boxFromLayout({ card, codeSize: 15, codeTop: 5 })
+    expect(box.width).toBeCloseTo(63.5 / 15)
+    expect(box.height).toBeCloseTo(88 / 15)
+    expect(box.y).toBeCloseTo(-5 / 15)
+    // the same distance from the code to the card's left and right edge
+    expect(-box.x).toBeCloseTo(box.x + box.width - 1)
+  })
+
+  it('puts the card edges where they are in millimetres', () => {
+    const box = boxFromLayout({ card, codeSize: 20, codeTop: 4 })
+    // left edge of the card: (63.5 - 20) / 2 = 21.75 mm left of the code
+    expect(box.x * 20).toBeCloseTo(-21.75)
+    // bottom edge: 88 - 4 = 84 mm below the code's top
+    expect((box.y + box.height) * 20).toBeCloseTo(84)
   })
 })
 
@@ -239,6 +318,19 @@ describe('createTracker', () => {
     }
     expect(last).toBeGreaterThan(first)
     expect(last).toBeCloseTo(100, 0)
+  })
+
+  it('smooths more for a bigger frame', () => {
+    const run = (frameWidth: number) => {
+      const t = createTracker({ smoothingMs: 100 })
+      t.update(detection('a', square(0, 0, 10)), 0)
+      t.step(0, frameWidth)
+      t.update(detection('a', square(100, 0, 10)), 10)
+      return t.step(60, frameWidth)!.corners[0].x
+    }
+    expect(run(4)).toBeLessThan(run(1))
+    // a frame no bigger than the code smooths as before
+    expect(run(0.5)).toBeCloseTo(run(1))
   })
 
   it('holds a lost code for a moment, then drops it', () => {

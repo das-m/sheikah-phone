@@ -2,19 +2,17 @@
 import { onMounted, onUnmounted, ref } from 'vue'
 
 import type { ScanState } from '@/composables/useCodeScanner'
-import { findTarget, type ScanTarget } from '@/game/scanTargets'
+import { aroundCode, findTarget, type ScanTarget } from '@/game/scanTargets'
 import {
+  boxQuad,
   coverMap,
   createTracker,
   homographyMatrix3d,
   mapQuad,
   pickDetection,
-  quadCenter,
-  scaleQuad
+  quadCenter
 } from '@/lib/scan'
 
-/** The frame is this many times the code, so it sits around it. */
-const FRAME_GROW = 1.35
 /** Size of the frame element in CSS px, before the matrix maps it onto the code. */
 const FRAME_SIZE = 100
 /** Space kept free at the bottom (above the frame art) for the label and the row of buttons below it, in px. */
@@ -68,15 +66,18 @@ function tick(now: number) {
     const known = props.scan.detections.filter((d) => findTarget(d.value))
     tracker.update(pickDetection(known, tracker.value), now)
   }
-  const tracked = tracker.step(now)
+  // The frame is drawn from the code: a big one (a whole card) multiplies the code's jitter, so it is smoothed more.
+  const followed = tracker.value === null ? null : findTarget(tracker.value)
+  const tracked = tracker.step(now, (followed?.frame ?? aroundCode).width)
   const target = tracked ? findTarget(tracked.value) : null
   if (!tracked || !target) return hide()
 
   const box = { width: root.clientWidth, height: root.clientHeight }
   const map = coverMap({ width: video.videoWidth, height: video.videoHeight }, box)
-  const quad = scaleQuad(mapQuad(tracked.corners, map), FRAME_GROW)
-  const matrix = homographyMatrix3d(quad, FRAME_SIZE)
-  if (!matrix) return hide()
+  // What the target frames (the code, or the card it sits on), found from the code's corners.
+  const quad = boxQuad(mapQuad(tracked.corners, map), target.frame ?? aroundCode)
+  const matrix = quad && homographyMatrix3d(quad, FRAME_SIZE)
+  if (!quad || !matrix) return hide()
 
   if (current?.id !== target.id) {
     current = target
@@ -90,7 +91,7 @@ function tick(now: number) {
   frameNode.style.visibility = 'visible'
   frameNode.style.transform = `matrix3d(${matrix.join(',')})`
 
-  // The label stays upright and readable below the code, wherever the code is turned to.
+  // The label stays upright and readable below the frame, wherever the code is turned to.
   const center = quadCenter(quad)
   const bottom = Math.max(...quad.map((p) => p.y))
   const x = Math.min(Math.max(center.x, 0), box.width)

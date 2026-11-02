@@ -53,16 +53,6 @@ export function quadCenter(quad: Quad): Point {
   }
 }
 
-/** The quad grown (`factor` > 1) or shrunk about its center: a frame that sits around the code instead of on it. */
-export function scaleQuad(quad: Quad, factor: number): Quad {
-  const c = quadCenter(quad)
-  const [a, b, d, e] = quad.map((p) => ({
-    x: c.x + (p.x - c.x) * factor,
-    y: c.y + (p.y - c.y) * factor
-  }))
-  return [a, b, d, e]
-}
-
 /** Area of a quad (shoelace), to tell the nearest of several codes apart. */
 export function quadArea(quad: Quad): number {
   let sum = 0
@@ -106,10 +96,22 @@ export function createFailureCounter(limit: number) {
 }
 
 /**
- * CSS `matrix3d` that maps a `size` x `size` box (transform-origin `0 0`) onto `quad`, perspective included, so an
- * element lies on the code with its skew and rotation. Null when the quad is degenerate (collinear corners).
+ * The projective map of the unit square onto a quad: `x' = (a u + b v + ox) / (g u + h v + 1)`,
+ * `y' = (d u + e v + oy) / (g u + h v + 1)`, with `(ox, oy)` the quad's first corner (the image of (0, 0)).
  */
-export function homographyMatrix3d(quad: Quad, size = 1): number[] | null {
+interface Homography {
+  a: number
+  b: number
+  d: number
+  e: number
+  g: number
+  h: number
+  ox: number
+  oy: number
+}
+
+/** Null when the quad is degenerate (collinear corners). */
+function homography(quad: Quad): Homography | null {
   const [p0, p1, p2, p3] = quad
   const sx = p0.x - p1.x + p2.x - p3.x
   const sy = p0.y - p1.y + p2.y - p3.y
@@ -119,32 +121,85 @@ export function homographyMatrix3d(quad: Quad, size = 1): number[] | null {
   const dy2 = p3.y - p2.y
   const den = dx1 * dy2 - dx2 * dy1
   if (Math.abs(den) < 1e-9) return null
-  // Unit square -> quad, x' = (a u + b v + c) / (g u + h v + 1), y' = (d u + e v + f) / (g u + h v + 1)
   const g = (sx * dy2 - dx2 * sy) / den
   const h = (dx1 * sy - sx * dy1) / den
-  const a = p1.x - p0.x + g * p1.x
-  const b = p3.x - p0.x + h * p3.x
-  const d = p1.y - p0.y + g * p1.y
-  const e = p3.y - p0.y + h * p3.y
+  return {
+    a: p1.x - p0.x + g * p1.x,
+    b: p3.x - p0.x + h * p3.x,
+    d: p1.y - p0.y + g * p1.y,
+    e: p3.y - p0.y + h * p3.y,
+    g,
+    h,
+    ox: p0.x,
+    oy: p0.y
+  }
+}
+
+/**
+ * CSS `matrix3d` that maps a `size` x `size` box (transform-origin `0 0`) onto `quad`, perspective included, so an
+ * element lies on the code with its skew and rotation. Null when the quad is degenerate (collinear corners).
+ */
+export function homographyMatrix3d(quad: Quad, size = 1): number[] | null {
+  const H = homography(quad)
+  if (!H) return null
   // column-major; u = x / size, v = y / size
   return [
-    a / size,
-    d / size,
+    H.a / size,
+    H.d / size,
     0,
-    g / size,
-    b / size,
-    e / size,
+    H.g / size,
+    H.b / size,
+    H.e / size,
     0,
-    h / size,
+    H.h / size,
     0,
     0,
     1,
     0,
-    p0.x,
-    p0.y,
+    H.ox,
+    H.oy,
     0,
     1
   ]
+}
+
+/** A rectangle on the code's plane, in code widths from the code's top left corner (x to the right, y down). */
+export interface FrameBox {
+  x: number
+  y: number
+  width: number
+  height: number
+}
+
+/**
+ * Where a `box` on the code's plane lands on screen, given the code's `quad`. A flat card is in the plane of its code,
+ * so the same homography that fits the code also fits the card, perspective and rotation included. Null when the quad
+ * is degenerate.
+ */
+export function boxQuad(quad: Quad, box: FrameBox): Quad | null {
+  const H = homography(quad)
+  if (!H) return null
+  const at = (u: number, v: number): Point => {
+    const w = H.g * u + H.h * v + 1
+    return { x: (H.a * u + H.b * v + H.ox) / w, y: (H.d * u + H.e * v + H.oy) / w }
+  }
+  const { x, y, width, height } = box
+  return [at(x, y), at(x + width, y), at(x + width, y + height), at(x, y + height)]
+}
+
+/**
+ * The box of a card that carries a code horizontally centered, `codeTop` below its top edge, printed upright.
+ * Everything in the same unit (mm); `codeSize` is the side of the code from finder pattern edge to edge, as the
+ * detector reports it, not counting the quiet zone.
+ */
+export function boxFromLayout(layout: { card: Size; codeSize: number; codeTop: number }): FrameBox {
+  const { card, codeSize, codeTop } = layout
+  return {
+    x: -(card.width - codeSize) / 2 / codeSize,
+    y: -codeTop / codeSize,
+    width: card.width / codeSize,
+    height: card.height / codeSize
+  }
 }
 
 export interface TrackerOptions {
@@ -214,14 +269,19 @@ export function createTracker(options: Partial<TrackerOptions> = {}) {
       streak++
       if (streak >= frames) confirmed = true
     },
-    /** The code to draw at `timeMs`, or null when none is being followed. */
-    step(timeMs: number): TrackedCode | null {
+    /**
+     * The code to draw at `timeMs`, or null when none is being followed. `frameWidth` is the width of the frame that
+     * is drawn from the code, in code widths: the code's corner jitter grows with it at the frame's far edge, so a big
+     * frame smooths more (by the square root: the frame also lags behind a moving code the more it smooths).
+     */
+    step(timeMs: number, frameWidth = 1): TrackedCode | null {
       if (value === null || target === null || shown === null) return null
       if (timeMs - lastSeen > holdMs) {
         clear()
         return null
       }
-      const alpha = 1 - Math.exp(-Math.max(0, timeMs - lastStep) / smoothingMs)
+      const smoothing = smoothingMs * Math.sqrt(Math.max(1, frameWidth))
+      const alpha = 1 - Math.exp(-Math.max(0, timeMs - lastStep) / smoothing)
       lastStep = timeMs
       const goal = target
       const [a, b, c, d] = shown.map((p, i) => ({
