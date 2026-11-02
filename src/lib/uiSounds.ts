@@ -5,8 +5,8 @@ import soundOpen from '@/assets/audio/open.ogg'
 import soundClose from '@/assets/audio/close.ogg'
 import soundOpenReversed from '@/assets/audio/open-reversed.ogg'
 import soundCloseReversed from '@/assets/audio/close-reversed.ogg'
-import soundLensOn from '@/assets/audio/lens-on.ogg'
-import soundLensOff from '@/assets/audio/lens-off.ogg'
+import soundLensOpen from '@/assets/audio/lens-open.ogg'
+import soundLensClose from '@/assets/audio/lens-close.ogg'
 
 const sources: Record<'open' | 'close', Record<AppMode, string>> = {
   open: { sheikah: soundOpen, yiga: soundOpenReversed },
@@ -15,7 +15,7 @@ const sources: Record<'open' | 'close', Record<AppMode, string>> = {
 
 // An app with its own loader look (`game/apps.ts`) has its own sounds too (Sheikah mode only).
 const variantSources: Record<Exclude<LoaderVariant, ''>, Record<'open' | 'close', string>> = {
-  lens: { open: soundLensOn, close: soundLensOff }
+  lens: { open: soundLensOpen, close: soundLensClose }
 }
 
 // Created on first use, so the Yiga sounds are not fetched for players who never see that mode.
