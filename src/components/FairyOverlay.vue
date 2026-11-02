@@ -39,6 +39,8 @@ const brain = createFairyBrain(fairyConfig)
 
 // TODO(fairy): temporary test link that skips to the next phase. Remove it, or show it in dev builds only.
 const phaseLabel = ref('')
+// The story only runs with orientation data, so the link only makes sense then.
+const hasOrientation = ref(false)
 let shownLabel = ''
 
 function labelFor(out: BrainOutput): string {
@@ -123,6 +125,7 @@ onMounted(() => {
 
     const current = orientation.current
     if (!current || width === 0) return
+    if (!hasOrientation.value) hasOrientation.value = true
     const angle = screen.orientation?.angle ?? 0
 
     const t = (now - start) / 1000
@@ -201,7 +204,7 @@ onUnmounted(() => {
 <template>
   <div class="FairyOverlay">
     <canvas ref="canvasEl" class="FairyOverlay-canvas"></canvas>
-    <button type="button" class="FairyOverlay-skip" @click="brain.skip()">
+    <button v-if="hasOrientation" type="button" class="FairyOverlay-skip" @click="brain.skip()">
       Fee: {{ phaseLabel }} ▸
     </button>
   </div>

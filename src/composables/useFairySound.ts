@@ -19,12 +19,16 @@ const moveUrls = [soundFairyMove1, soundFairyMove2, soundFairyMove3]
 // An AudioBuffer works with any context, so each file is fetched and decoded once, not on every visit.
 const bufferPromises = new Map<string, Promise<AudioBuffer>>()
 
-function loadBuffer(context: AudioContext, url: string): Promise<AudioBuffer> {
+// Decoded with a context of its own that is never closed: decoding with the mounted context would fail for everyone
+// waiting on the shared promise when that screen is left before it finished.
+let decoder: OfflineAudioContext | null = null
+
+function loadBuffer(url: string): Promise<AudioBuffer> {
   let promise = bufferPromises.get(url)
   if (!promise) {
     promise = fetch(url)
       .then((response) => response.arrayBuffer())
-      .then((data) => context.decodeAudioData(data))
+      .then((data) => (decoder ??= new OfflineAudioContext(1, 1, 48000)).decodeAudioData(data))
       .catch((error) => {
         bufferPromises.delete(url)
         throw error
@@ -104,9 +108,9 @@ export function useFairySound() {
 
     // A missing sound is not an error for the game: each one is optional.
     const [loop, hey, ...moves] = await Promise.allSettled([
-      loadBuffer(context, soundFairy),
-      loadBuffer(context, soundFairyHey),
-      ...moveUrls.map((url) => loadBuffer(context, url))
+      loadBuffer(soundFairy),
+      loadBuffer(soundFairyHey),
+      ...moveUrls.map((url) => loadBuffer(url))
     ])
     // Left the app while the sounds were loading.
     if (ctx !== context) return
