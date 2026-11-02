@@ -24,6 +24,8 @@ const HOLD_MS = 1000
 const props = defineProps<{
   video: HTMLVideoElement | null
   scan: ScanState
+  /** Scanning rests (the modal is open): the empty readings it publishes then do not mean the code left the view. */
+  paused?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -74,7 +76,7 @@ function tick(now: number) {
     const known = props.scan.detections.filter((d) => findTarget(d.value))
     tracker.update(pickDetection(known, tracker.value), now)
     // A reading without any of our codes: the last one that opened is gone, the next one may open again.
-    if (known.length === 0) isArmed = true
+    if (known.length === 0 && !props.paused) isArmed = true
   }
   // The frame is drawn from the code: a big one (a whole card) multiplies the code's jitter, so it is smoothed more.
   const followed = tracker.value === null ? null : findTarget(tracker.value)

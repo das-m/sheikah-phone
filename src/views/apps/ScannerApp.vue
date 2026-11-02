@@ -106,6 +106,7 @@ onUnmounted(() => {
           class="App-overlay"
           :video="videoEl"
           :scan="scan"
+          :paused="modal !== null"
           @confirm="onConfirm"
           @open="run"
         />
