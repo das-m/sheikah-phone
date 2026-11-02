@@ -58,7 +58,8 @@ const seconds = computed(() => {
 <style lang="scss" scoped>
 @use '@/assets/scss/widget';
 
-// The parent sets the look through `--widget-clock-size` and `--widget-align` (flex alignment of the content).
+// The parent sets the look through `--widget-clock-size`, `--widget-clock-weight` and `--widget-align` (flex
+// alignment of the content).
 .ClockWidget {
   position: relative;
   color: var(--color-primary);
@@ -76,7 +77,7 @@ const seconds = computed(() => {
       line-height: 1.2;
 
       div {
-        font-weight: 500;
+        font-weight: var(--widget-clock-weight, 500);
       }
     }
 

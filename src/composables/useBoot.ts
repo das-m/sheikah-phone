@@ -7,6 +7,7 @@ import {
   isBootDone,
   isFrameDue,
   isLogoDue,
+  isScreenDue,
   workFraction,
   type GroupProgress,
   type PreloadGroup
@@ -14,7 +15,7 @@ import {
 import { createPreloadTasks, preloadCritical, runPreload } from '@/lib/preload'
 
 /**
- * Drives the boot screen: a clock for the show (black, then the logo, then the frame) and the real preloading
+ * Drives the boot screen: a clock for the show (black, then the frame, then the screen, then the logo) and the real preloading
  * it waits for. Stops its frame loop on unmount, and when the boot is done or skipped.
  */
 export function useBoot() {
@@ -32,6 +33,7 @@ export function useBoot() {
   for (const task of tasks) groups[task.group].total += 1
 
   const elapsed = ref(0)
+  const isScreenOn = ref(false)
   const isLogoOn = ref(false)
   const isFrameOn = ref(false)
   const isFinished = ref(false)
@@ -40,20 +42,30 @@ export function useBoot() {
 
   let frame = 0
   let startedAt = 0
+  let frameAt: number | null = null
+  let screenAt: number | null = null
   let logoAt: number | null = null
-  let isLogoReady = false
+  let isArtReady = false
 
   function tick(now: number) {
     elapsed.value = Math.max(0, now - startedAt)
 
-    if (logoAt === null && isLogoDue(elapsed.value, isLogoReady, timing)) {
+    if (frameAt === null && isFrameDue(elapsed.value, isArtReady, timing)) {
+      frameAt = elapsed.value
+      isFrameOn.value = true
+    }
+    if (screenAt === null && isScreenDue(elapsed.value, frameAt, timing)) {
+      screenAt = elapsed.value
+      isScreenOn.value = true
+    }
+    if (logoAt === null && isLogoDue(elapsed.value, screenAt, timing)) {
       logoAt = elapsed.value
       isLogoOn.value = true
     }
-    if (!isFrameOn.value && isFrameDue(elapsed.value, logoAt, timing)) isFrameOn.value = true
 
     if (isBootDone(elapsed.value, logoAt, work.value, timing)) {
       isLogoOn.value = false
+      isScreenOn.value = true
       isFrameOn.value = true
       isFinished.value = true
       return
@@ -66,6 +78,7 @@ export function useBoot() {
     if (isFinished.value || elapsed.value < timing.skipAfterMs) return
     cancelAnimationFrame(frame)
     isLogoOn.value = false
+    isScreenOn.value = true
     isFrameOn.value = true
     isFinished.value = true
   }
@@ -73,11 +86,11 @@ export function useBoot() {
   onMounted(() => {
     startedAt = performance.now()
     frame = requestAnimationFrame(tick)
-    void preloadCritical().then(() => (isLogoReady = true))
+    void preloadCritical().then(() => (isArtReady = true))
     void runPreload(tasks, (group) => (groups[group].done += 1))
   })
 
   onUnmounted(() => cancelAnimationFrame(frame))
 
-  return { isLogoOn, isFrameOn, isFinished, skip }
+  return { isLogoOn, isScreenOn, isFrameOn, isFinished, skip }
 }

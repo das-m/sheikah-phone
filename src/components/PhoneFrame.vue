@@ -1,7 +1,7 @@
 <script setup lang="ts">
 // `on`: the frame is built. It stays dark until then (the boot screen is black) and comes together once, when this
-// turns true: the four stone corners slide in from their edges and settle, the strips (the patterns, not animated)
-// show as the stones are seated, and the glow lights up after it.
+// turns true: the whole stone frame (corners and strips, one piece of art) slides in together, the top edge from
+// above and the bottom edge from below, and the glow lights up after it.
 defineProps<{ on?: boolean }>()
 
 const corners = ['tl', 'tr', 'br', 'bl']
@@ -41,24 +41,16 @@ const corners = ['tl', 'tr', 'br', 'bl']
     inset: 0;
   }
 
-  // Which way each stone comes from (in its own sizes: -1 is one width / height to the left / above).
-  &-corner--tl {
-    --from-x: -1;
+  // Which edge a stone slides in from (the same distance for all, see `frame-stone-in`).
+  &-corner--tl,
+  &-corner--tr,
+  &-strip--top {
     --from-y: -1;
   }
 
-  &-corner--tr {
-    --from-x: 1;
-    --from-y: -1;
-  }
-
-  &-corner--br {
-    --from-x: 1;
-    --from-y: 1;
-  }
-
-  &-corner--bl {
-    --from-x: -1;
+  &-corner--bl,
+  &-corner--br,
+  &-strip--bottom {
     --from-y: 1;
   }
 
@@ -127,22 +119,21 @@ const corners = ['tl', 'tr', 'br', 'bl']
 
 // Build-up (the layers' own animations stay free for the glow's breathing). Without `--on` everything is dark.
 .PhoneFrame:not(.PhoneFrame--on) {
-  .PhoneFrame-corner,
-  .PhoneFrame-strip {
+  .PhoneFrame-layer--stone,
+  .PhoneFrame-layer--glow .PhoneFrame-corner,
+  .PhoneFrame-layer--glow .PhoneFrame-strip {
     opacity: 0;
   }
 }
 
 .PhoneFrame--on {
+  // The frame is one piece of art (corners and strips are only split for the screen sizes), so the stone moves
+  // as one: every piece of the top edge slides down and every piece of the bottom edge slides up by the same
+  // distance, on the same timing, so the edges stay rigid. Heavy stone: it settles without a bounce.
   .PhoneFrame-layer--stone {
-    // Heavy stones: they slide in and settle without a bounce.
-    .PhoneFrame-corner {
-      animation: frame-stone-in 1.5s cubic-bezier(0.22, 1, 0.36, 1) both;
-    }
-
-    // The patterns do not move: they show when the stones are seated.
+    .PhoneFrame-corner,
     .PhoneFrame-strip {
-      animation: frame-show 0.01s 1.4s both;
+      animation: frame-stone-in 1.5s cubic-bezier(0.22, 1, 0.36, 1) both;
     }
   }
 
@@ -155,26 +146,13 @@ const corners = ['tl', 'tr', 'br', 'bl']
   }
 }
 
+// 500 source pixels clears the tallest corner (490), so every piece starts fully off screen.
 @keyframes frame-stone-in {
   from {
-    opacity: 0;
-    transform: translate(calc(var(--from-x) * 100%), calc(var(--from-y) * 100%));
-  }
-  15% {
-    opacity: 1;
+    transform: translateY(calc(var(--from-y) * 500 * var(--u)));
   }
   to {
-    opacity: 1;
     transform: none;
-  }
-}
-
-@keyframes frame-show {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
   }
 }
 
@@ -223,6 +201,7 @@ const corners = ['tl', 'tr', 'br', 'bl']
   }
 
   .PhoneFrame--on {
+    .PhoneFrame-layer--stone,
     .PhoneFrame-corner,
     .PhoneFrame-strip {
       animation: none;

@@ -63,6 +63,9 @@ function onVersionTap() {
   overflow-y: auto;
 
   &-clock {
+    // same size and weight as the weather, so the two line up
+    --widget-clock-size: 1.55em;
+    --widget-clock-weight: 400;
     grid-area: clock;
   }
 
@@ -153,7 +156,6 @@ function onVersionTap() {
     // two widgets look evenly spaced beside the different corner art. Only the widgets are inset, the apps
     // and the version stay centered on the screen.
     &-clock {
-      --widget-clock-size: 1.8em;
       --widget-align: flex-start;
       justify-self: start;
       margin-left: calc(195 * var(--u));

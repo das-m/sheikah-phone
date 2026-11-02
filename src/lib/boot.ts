@@ -1,7 +1,8 @@
 // Pacing of the boot screen. Pure, so it is testable without a browser.
-// The show starts black. The logo ignites once its art is loaded and decoded (so it never flickers in), the frame
-// of the slate draws in after it, and the show has a floor (`minAfterLogoMs`, so it never flashes by) and a ceiling
-// (`maxMs`, so a slow connection never holds the player back); in between it waits for the real preloading.
+// The show starts black. The frame of the slate draws in first, once its art is loaded and decoded (so it never
+// flickers in), the glow blinks on, then the screen turns on and the logo appears on it. The show has a floor
+// (`minAfterLogoMs`, so it never flashes by) and a ceiling (`maxMs`, so a slow connection never holds the player
+// back); in between it waits for the real preloading.
 
 export type PreloadGroup = 'fonts' | 'images' | 'audio' | 'modules'
 
@@ -11,12 +12,14 @@ export interface GroupProgress {
 }
 
 export interface BootTiming {
-  /** The screen stays black at least this long before the logo ignites. */
-  logoAtMs: number
-  /** The logo ignites here at the latest, even if its art is still loading. */
-  logoWaitMaxMs: number
-  /** The frame starts to draw in this long after the logo ignited (the eye has settled by then). */
-  frameAfterLogoMs: number
+  /** The screen stays black at least this long before the frame draws in. */
+  frameAtMs: number
+  /** The frame draws in here at the latest, even if its art is still loading. */
+  frameWaitMaxMs: number
+  /** The screen turns on this long after the frame started to draw in (the glow has finished blinking by then). */
+  screenAfterFrameMs: number
+  /** The logo appears this long after the screen turned on. */
+  logoAfterScreenMs: number
   /** Earliest end of the boot, counted from the logo's ignition. */
   minAfterLogoMs: number
   /** Latest end of the boot, whatever is still loading (it keeps loading in the background). */
@@ -26,19 +29,21 @@ export interface BootTiming {
 }
 
 export const BOOT_TIMING: BootTiming = {
-  logoAtMs: 900,
-  logoWaitMaxMs: 3000,
-  frameAfterLogoMs: 1800,
-  minAfterLogoMs: 5000,
+  frameAtMs: 900,
+  frameWaitMaxMs: 3000,
+  screenAfterFrameMs: 3200,
+  logoAfterScreenMs: 1000,
+  minAfterLogoMs: 2000,
   maxMs: 10000,
   skipAfterMs: 2500
 }
 
 /** For `prefers-reduced-motion`: the same steps, without the wait. */
 export const BOOT_TIMING_REDUCED: BootTiming = {
-  logoAtMs: 0,
-  logoWaitMaxMs: 1500,
-  frameAfterLogoMs: 300,
+  frameAtMs: 0,
+  frameWaitMaxMs: 1500,
+  screenAfterFrameMs: 300,
+  logoAfterScreenMs: 200,
   minAfterLogoMs: 1000,
   maxMs: 4000,
   skipAfterMs: 0
@@ -69,18 +74,27 @@ export function workFraction(
   return sum > 0 ? done / sum : 1
 }
 
-/** Time to ignite the logo: after the black hold, once its art is ready (or the wait has run out). */
-export function isLogoDue(elapsedMs: number, logoReady: boolean, timing = BOOT_TIMING): boolean {
-  return elapsedMs >= timing.logoAtMs && (logoReady || elapsedMs >= timing.logoWaitMaxMs)
+/** Time to draw the frame in: after the black hold, once its art is ready (or the wait has run out). */
+export function isFrameDue(elapsedMs: number, frameReady: boolean, timing = BOOT_TIMING): boolean {
+  return elapsedMs >= timing.frameAtMs && (frameReady || elapsedMs >= timing.frameWaitMaxMs)
 }
 
-/** Time to draw the frame in; `logoAtMs` is when the logo ignited (null: not yet). */
-export function isFrameDue(
+/** Time to turn the screen on; `frameAtMs` is when the frame started to draw in (null: not yet). */
+export function isScreenDue(
   elapsedMs: number,
-  logoAtMs: number | null,
+  frameAtMs: number | null,
   timing = BOOT_TIMING
 ): boolean {
-  return logoAtMs !== null && elapsedMs >= logoAtMs + timing.frameAfterLogoMs
+  return frameAtMs !== null && elapsedMs >= frameAtMs + timing.screenAfterFrameMs
+}
+
+/** Time to show the logo; `screenAtMs` is when the screen turned on (null: not yet). */
+export function isLogoDue(
+  elapsedMs: number,
+  screenAtMs: number | null,
+  timing = BOOT_TIMING
+): boolean {
+  return screenAtMs !== null && elapsedMs >= screenAtMs + timing.logoAfterScreenMs
 }
 
 export function isBootDone(

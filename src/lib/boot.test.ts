@@ -5,6 +5,7 @@ import {
   isBootDone,
   isFrameDue,
   isLogoDue,
+  isScreenDue,
   workFraction,
   type GroupProgress,
   type PreloadGroup
@@ -39,29 +40,40 @@ describe('workFraction', () => {
   })
 })
 
-describe('isLogoDue', () => {
+describe('isFrameDue', () => {
   it('holds the black screen first, even when the art is ready', () => {
-    expect(isLogoDue(t.logoAtMs - 1, true)).toBe(false)
-    expect(isLogoDue(t.logoAtMs, true)).toBe(true)
+    expect(isFrameDue(t.frameAtMs - 1, true)).toBe(false)
+    expect(isFrameDue(t.frameAtMs, true)).toBe(true)
   })
 
   it('waits for the art after the hold', () => {
-    expect(isLogoDue(t.logoAtMs + 500, false)).toBe(false)
+    expect(isFrameDue(t.frameAtMs + 500, false)).toBe(false)
   })
 
   it('stops waiting for the art at the limit', () => {
-    expect(isLogoDue(t.logoWaitMaxMs, false)).toBe(true)
+    expect(isFrameDue(t.frameWaitMaxMs, false)).toBe(true)
   })
 })
 
-describe('isFrameDue', () => {
-  it('needs the logo first', () => {
-    expect(isFrameDue(60000, null)).toBe(false)
+describe('isScreenDue', () => {
+  it('needs the frame first', () => {
+    expect(isScreenDue(60000, null)).toBe(false)
   })
 
-  it('follows the logo by its delay', () => {
-    expect(isFrameDue(1000 + t.frameAfterLogoMs - 1, 1000)).toBe(false)
-    expect(isFrameDue(1000 + t.frameAfterLogoMs, 1000)).toBe(true)
+  it('follows the frame by its delay', () => {
+    expect(isScreenDue(1000 + t.screenAfterFrameMs - 1, 1000)).toBe(false)
+    expect(isScreenDue(1000 + t.screenAfterFrameMs, 1000)).toBe(true)
+  })
+})
+
+describe('isLogoDue', () => {
+  it('needs the screen first', () => {
+    expect(isLogoDue(60000, null)).toBe(false)
+  })
+
+  it('follows the screen by its delay', () => {
+    expect(isLogoDue(5000 + t.logoAfterScreenMs - 1, 5000)).toBe(false)
+    expect(isLogoDue(5000 + t.logoAfterScreenMs, 5000)).toBe(true)
   })
 })
 

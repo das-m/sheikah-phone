@@ -16,10 +16,11 @@ const emit = defineEmits<{ frame: []; ready: []; done: [] }>()
 const LEAVE_MS = 1200
 
 const { mode } = useYigaMode()
-const { isLogoOn, isFrameOn, isFinished, skip } = useBoot()
+const { isLogoOn, isScreenOn, isFrameOn, isFinished, skip } = useBoot()
 
-// The screen starts black. The logo is the one of the other transitions (same place, same enter and leave):
-// it plays its enter animation when switched on, once its art is loaded (so it does not flicker in).
+// The screen starts black. The frame draws in first and its glow blinks on; then the screen turns on (the tube
+// comes up) and the logo appears on it: the one of the other transitions (same place, same enter and leave),
+// which plays its enter animation.
 const isLeaving = ref(false)
 let leaveTimer: ReturnType<typeof setTimeout> | undefined
 
@@ -51,7 +52,7 @@ onUnmounted(() => clearTimeout(leaveTimer))
   >
     <SheikahLoader :show="isLogoOn" />
 
-    <ScanlineOverlay :class="['Boot-scanlines', { 'Boot-scanlines--on': isLogoOn }]" />
+    <ScanlineOverlay :class="['Boot-scanlines', { 'Boot-scanlines--on': isScreenOn }]" />
   </div>
 </template>
 
@@ -70,15 +71,35 @@ onUnmounted(() => clearTimeout(leaveTimer))
     animation: boot-out 1.2s ease-in both;
   }
 
-  // The tube comes on with the logo.
+  // The tube comes on before the logo: a short flicker that settles.
   &-scanlines {
     z-index: 7;
     opacity: 0;
-    transition: opacity 1.5s ease-out;
 
     &--on {
-      opacity: 1;
+      animation: boot-screen-on 0.9s linear both;
     }
+  }
+}
+
+@keyframes boot-screen-on {
+  0% {
+    opacity: 0;
+  }
+  15% {
+    opacity: 0.8;
+  }
+  25% {
+    opacity: 0.2;
+  }
+  45% {
+    opacity: 1;
+  }
+  55% {
+    opacity: 0.5;
+  }
+  100% {
+    opacity: 1;
   }
 }
 

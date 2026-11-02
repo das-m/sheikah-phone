@@ -142,7 +142,8 @@ const locations = computed(() => props.content?.locations?.split('\n').filter(Bo
   &-location {
     margin: 0 0 1em;
     padding: 0 0.3em;
-    font-size: 1em;
+    font-size: 0.75em;
+    font-weight: 300;
     line-height: 1.3;
   }
 
@@ -165,7 +166,7 @@ const locations = computed(() => props.content?.locations?.split('\n').filter(Bo
 
   &-button {
     padding: 0.6em 2em;
-    font-size: 0.9em;
+    font-size: 0.75em;
     font-style: normal;
     @include button.framed;
   }

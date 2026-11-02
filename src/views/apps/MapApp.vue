@@ -664,8 +664,8 @@ $settle-delay: 0.6s;
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
-        font-size: 1.5em;
-        font-weight: 500;
+        font-size: 1.55em;
+        font-weight: 400;
         line-height: 1.2;
       }
 
