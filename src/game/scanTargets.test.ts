@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { findSensor, sensors } from './sensors'
-import { aroundCode, cardFrame, findTarget, scanTargets } from './scanTargets'
+import { aroundCode, findTarget, scanTargets } from './scanTargets'
 
 describe('scanTargets', () => {
   it('has unique ids', () => {
@@ -56,25 +56,12 @@ describe('sensors', () => {
   })
 })
 
-describe('frames', () => {
-  it('frames a card well beyond its code', () => {
-    // a 63.5 x 88 mm card carrying a smaller code: several code widths wide and tall, the code inside the box
-    expect(cardFrame.width).toBeGreaterThan(2)
-    expect(cardFrame.height).toBeGreaterThan(cardFrame.width)
-    expect(cardFrame.x).toBeLessThan(0)
-    expect(cardFrame.x + cardFrame.width).toBeGreaterThan(1)
-    expect(cardFrame.y).toBeLessThanOrEqual(0)
-  })
-
+describe('aroundCode', () => {
   it('frames only a little more than the code by default', () => {
     expect(aroundCode.width).toBeCloseTo(1.35)
     // centered on the code
     expect(aroundCode.x + aroundCode.width / 2).toBeCloseTo(0.5)
     expect(aroundCode.y + aroundCode.height / 2).toBeCloseTo(0.5)
-  })
-
-  it('gives every target the card frame', () => {
-    for (const target of scanTargets) expect(target.frame).toBe(cardFrame)
   })
 })
 

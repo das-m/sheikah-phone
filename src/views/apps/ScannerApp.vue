@@ -10,9 +10,11 @@ import { useCamera } from '@/composables/useCamera'
 import { useCodeScanner } from '@/composables/useCodeScanner'
 import { useFrameGlow } from '@/composables/useFrameGlow'
 import { useScanAction } from '@/composables/useScanAction'
-import { scanFilter } from '@/game/scanFilters'
-import { findTarget } from '@/game/scanTargets'
+import { useScreenAngle } from '@/composables/useScreenAngle'
+import { LENS_SHIFT, scanFilter } from '@/game/scanFilters'
+import { findTarget, type ScanTarget } from '@/game/scanTargets'
 import { playSound } from '@/lib/audio'
+import { lensOffset } from '@/lib/lens'
 
 import soundSystemError from '@/assets/audio/error.ogg'
 import soundDetect from '@/assets/audio/camera-detect.ogg'
@@ -60,9 +62,17 @@ function onSelect() {
   select()
 }
 
-function onConfirm() {
+// The recognised code: its name shows beside the lens and the lens ring takes the detection color while it is held.
+const detected = ref<ScanTarget | null>(null)
+
+function onConfirm(target: ScanTarget) {
+  detected.value = target
   if (performance.now() >= quietUntil) playSound(audioDetect)
 }
+
+// The physical camera is not in the middle of the phone: the lens moves away from its end (`lib/lens.ts`).
+const screenAngle = useScreenAngle()
+const lensShift = computed(() => lensOffset(screenAngle.value, LENS_SHIFT))
 
 // Manual fallback for a damaged code or a camera that does not work.
 const isEntering = ref(false)
@@ -99,7 +109,7 @@ onUnmounted(() => {
 
 <template>
   <Transition name="lens" appear>
-    <div class="App">
+    <div class="App" :style="{ '--lens-shift': lensShift }">
       <BackButton />
       <template v-if="!hasFailed">
         <!-- The camera keeps its full-screen box (the overlay's maths depend on it) and is cut to the lens round. -->
@@ -108,7 +118,7 @@ onUnmounted(() => {
           <ScanlineOverlay class="App-scanlines" />
         </div>
         <div ref="lensEl" class="App-lens">
-          <LensRim :paused="modal !== null" />
+          <LensRim :paused="modal !== null" :detected="detected !== null" />
         </div>
         <ScanOverlay
           class="App-overlay"
@@ -117,8 +127,15 @@ onUnmounted(() => {
           :paused="modal !== null"
           :region="lensEl"
           @confirm="onConfirm"
+          @lose="detected = null"
           @open="run"
         />
+        <!-- Beside the lens; a tap opens it at once (the fallback for the hold). -->
+        <Transition name="detected">
+          <button v-if="detected" type="button" class="App-detected" @click="run(detected)">
+            <span class="App-detected-id">{{ detected.id }}</span> {{ detected.name }}
+          </button>
+        </Transition>
       </template>
       <div class="App-camera App-camera--disabled" v-else>
         <div class="App-camera-icon App-camera-icon--disabled"></div>
@@ -166,7 +183,9 @@ onUnmounted(() => {
     (100% - var(--frame-top) - var(--frame-bottom) - var(--lens-d)) / 2 + var(--frame-top)
   );
   --lens-cy: calc(var(--lens-top) + var(--lens-d) / 2);
-  background: radial-gradient(circle at 50% var(--lens-cy), #1c1040, #07040f 80%);
+  // Moved sideways by `--lens-shift` (set from the script, a signed fraction of the diameter), see `lib/lens.ts`.
+  --lens-cx: calc(50% + var(--lens-d) * var(--lens-shift, 0));
+  background: radial-gradient(circle at var(--lens-cx) var(--lens-cy), #1c1040, #07040f 80%);
   // The lens does not wait for the loader to be gone (`--screen-delay`): it fades in as the loader's exit (0.65 s)
   // begins and is opaque before the loader lets go, so the blue swirl behind never shows.
   --lens-in: calc(var(--screen-delay) - 0.65s);
@@ -174,7 +193,7 @@ onUnmounted(() => {
   @include camera.stage($scope: false);
 
   &-camera {
-    clip-path: circle(calc(var(--lens-d) / 2) at 50% var(--lens-cy));
+    clip-path: circle(calc(var(--lens-d) / 2) at var(--lens-cx) var(--lens-cy));
     // The lens opens like an iris once the loader is done (the same clip-path trick as the map's reveal).
     animation: lens-open 0.9s var(--lens-in) ease-out both;
   }
@@ -183,11 +202,36 @@ onUnmounted(() => {
     position: absolute;
     z-index: 30;
     top: var(--lens-top);
-    left: 50%;
+    left: calc(var(--lens-cx) - var(--lens-d) / 2);
     width: var(--lens-d);
     height: var(--lens-d);
-    transform: translateX(-50%);
     pointer-events: none;
+  }
+
+  // The name of the recognised code, right of the lens (landscape: free space beside the circle).
+  &-detected {
+    position: absolute;
+    z-index: 40;
+    top: var(--lens-cy);
+    right: calc(var(--frame-corner-br) + 0.5rem);
+    transform: translateY(-50%);
+    max-width: calc((100vw - var(--lens-d)) / 2 - 1.5rem);
+    padding: 0.4em 0.2em;
+    border: 0;
+    border-bottom: 2px solid var(--color-primary);
+    background: rgba(0, 0, 0, 0.55);
+    color: var(--color-primary);
+    font-family: OpenSans, sans-serif;
+    font-style: italic;
+    font-size: 1.1em;
+    text-align: right;
+    text-shadow: 0 0 8px var(--color-primary);
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+
+    &-id {
+      opacity: 0.7;
+    }
   }
 
   &-scanlines {
@@ -266,8 +310,18 @@ onUnmounted(() => {
 
 @keyframes lens-open {
   from {
-    clip-path: circle(0 at 50% var(--lens-cy));
+    clip-path: circle(0 at var(--lens-cx) var(--lens-cy));
   }
+}
+
+.detected-enter-active,
+.detected-leave-active {
+  transition: opacity 0.2s;
+}
+
+.detected-enter-from,
+.detected-leave-to {
+  opacity: 0;
 }
 
 @media (prefers-reduced-motion: reduce) {

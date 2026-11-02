@@ -6,6 +6,8 @@ import type { ScanTarget } from '@/game/scanTargets'
 import { findSensor, type SensorEvent } from '@/game/sensors'
 
 export interface ScanModalContent {
+  /** The entry number shown before the title (the sensor event's id). */
+  number?: string
   title: string
   text: string
   /** Asset URL of a picture. */
@@ -26,6 +28,7 @@ function assertNever(type: never): never {
 function sensorModal(sensor: SensorEvent): ScanModalContent {
   const available = sensor.status === 'available'
   return {
+    number: sensor.id,
     title: sensor.name,
     text: sensor.description,
     image: sensor.image,

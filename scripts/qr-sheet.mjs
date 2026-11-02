@@ -11,7 +11,7 @@
 //   Other options: `--margin <modules>` quiet zone around each code (default 2, the spec asks for 4 but phones read
 //   2), `--ink <color>` and `--paper <color>` for dark-brown-on-parchment style tests (default black on white).
 //
-// A size is the side of the code itself, finder pattern edge to edge, the same as `CODE_MM` in `src/game/scanTargets.ts`.
+// A size is the side of the code itself, finder pattern edge to edge.
 // The quiet zone comes on top. Every code must be QR version 1 (21x21 modules): short digit ids are, longer ones are not.
 import { writeFileSync } from 'node:fs'
 import QRCode from 'qrcode'

@@ -1,31 +1,54 @@
 <script setup lang="ts">
+import { computed } from 'vue'
+
+import OrnamentTitle from '@/components/OrnamentTitle.vue'
 import type { ScanModalContent } from '@/composables/useScanAction'
 
-defineProps<{ content: ScanModalContent | null }>()
+const props = defineProps<{ content: ScanModalContent | null }>()
 const emit = defineEmits<{ close: []; select: [] }>()
+
+// "Common locations" may list several places, one per line.
+const locations = computed(() => props.content?.locations?.split('\n').filter(Boolean) ?? [])
 </script>
 
 <template>
   <Transition name="fade">
     <div class="ScanModal" v-if="content" @click.self="emit('close')">
       <div class="ScanModal-panel" role="dialog" aria-modal="true" :aria-label="content.title">
-        <h2 class="ScanModal-title">{{ content.title }}</h2>
-        <img v-if="content.image" class="ScanModal-image" :src="content.image" alt="" />
-        <p class="ScanModal-text">{{ content.text }}</p>
-        <p class="ScanModal-locations" v-if="content.locations">
-          <span class="ScanModal-label">Zu finden:</span> {{ content.locations }}
-        </p>
-        <p class="ScanModal-status" v-if="content.statusText">{{ content.statusText }}</p>
-        <div class="ScanModal-buttons">
-          <button
-            type="button"
-            class="ScanModal-button"
-            v-if="content.selectable"
-            @click="emit('select')"
-          >
-            Auswählen
-          </button>
-          <button type="button" class="ScanModal-button" @click="emit('close')">Zurück</button>
+        <!-- The entry, like the compendium: title and picture left, the texts right. -->
+        <div class="ScanModal-visual">
+          <h2 class="ScanModal-title">
+            <span class="ScanModal-number" v-if="content.number">{{ content.number }}</span>
+            {{ content.title }}
+          </h2>
+          <div class="ScanModal-picture">
+            <img v-if="content.image" class="ScanModal-image" :src="content.image" alt="" />
+            <div v-else class="ScanModal-placeholder"></div>
+          </div>
+        </div>
+
+        <div class="ScanModal-info">
+          <OrnamentTitle label="Beschreibung" />
+          <p class="ScanModal-text">{{ content.text }}</p>
+
+          <template v-if="locations.length">
+            <OrnamentTitle label="Fundorte" />
+            <p class="ScanModal-location" v-for="place in locations" :key="place">{{ place }}</p>
+          </template>
+
+          <p class="ScanModal-status" v-if="content.statusText">{{ content.statusText }}</p>
+
+          <div class="ScanModal-buttons">
+            <button
+              type="button"
+              class="ScanModal-button"
+              v-if="content.selectable"
+              @click="emit('select')"
+            >
+              Auswählen
+            </button>
+            <button type="button" class="ScanModal-button" @click="emit('close')">Zurück</button>
+          </div>
         </div>
       </div>
     </div>
@@ -34,7 +57,6 @@ const emit = defineEmits<{ close: []; select: [] }>()
 
 <style lang="scss" scoped>
 @use '@/assets/scss/button';
-@use '@/assets/scss/surface';
 
 .ScanModal {
   position: fixed;
@@ -44,60 +66,96 @@ const emit = defineEmits<{ close: []; select: [] }>()
   align-items: center;
   justify-content: center;
   padding: calc(var(--frame-top) + 1rem) 2rem calc(var(--frame-bottom) + 1rem);
-  background: rgba(0, 0, 0, 0.6);
+  background: rgba(4, 6, 16, 0.88);
 
+  // Two columns in landscape (picture | texts), one in a narrow window.
   &-panel {
-    width: min(100%, 32rem);
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.7fr);
+    gap: 2rem;
+    align-items: start;
+    width: min(100%, 60rem);
     max-height: 100%;
     overflow-y: auto;
-    padding: 1rem 1.5rem;
-    border: 20px solid transparent;
-    border-image: url(@/assets/images/ui/frame.svg) 10 / 20px;
-    text-align: center;
-    color: var(--color-contrast);
-    @include surface.surface;
+    color: var(--color-primary);
+    font-family: OpenSans, sans-serif;
+    font-style: italic;
+    text-shadow: 0 0 8px color-mix(in srgb, var(--color-primary) 60%, transparent);
+
+    @media (max-aspect-ratio: 1/1) {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  &-visual {
+    min-width: 0;
   }
 
   &-title {
-    margin: 0 0 0.8em;
-    font-family: HyliaSerif, serif;
-    font-weight: normal;
+    margin: 0 0 0.5em;
     font-size: 1.4em;
-    letter-spacing: 0.05em;
-    color: var(--color-primary);
+    font-weight: 600;
+    line-height: 1.2;
+    text-align: center;
     text-shadow: 0 0 8px var(--color-primary);
   }
 
-  &-image {
+  &-number {
+    opacity: 0.8;
+  }
+
+  // The picture sits in a thin, bright frame. It is a square, but never taller than the free height.
+  &-picture {
+    width: min(100%, calc(100vh - var(--frame-top) - var(--frame-bottom) - 7rem));
+    aspect-ratio: 1;
+    margin: 0 auto;
+    padding: 0.5rem;
+    box-sizing: border-box;
+    border: 2px solid color-mix(in srgb, var(--color-primary) 55%, transparent);
+    box-shadow:
+      0 0 12px color-mix(in srgb, var(--color-primary) 45%, transparent),
+      inset 0 0 12px color-mix(in srgb, var(--color-primary) 30%, transparent);
+  }
+
+  &-image,
+  &-placeholder {
     display: block;
-    max-width: 100%;
-    max-height: 30vh;
-    margin: 0 auto 1em;
-    object-fit: contain;
+    width: 100%;
+    height: 100%;
   }
 
-  &-text {
+  &-image {
+    object-fit: cover;
+  }
+
+  // No picture yet: the dim Sheikah eye on a dark ground.
+  &-placeholder {
+    background:
+      url(@/assets/images/logo/sheikah-main.svg) center / 55% no-repeat,
+      rgba(0, 0, 0, 0.4);
+    opacity: 0.35;
+  }
+
+  &-text,
+  &-location {
     margin: 0 0 1em;
-    line-height: 1.5;
+    padding: 0 0.3em;
+    font-size: 1.15em;
+    line-height: 1.3;
   }
 
-  &-locations {
-    margin: 0 0 1em;
-    line-height: 1.5;
-  }
-
-  &-label {
-    color: var(--color-primary);
+  &-location {
+    margin-bottom: 0.3em;
   }
 
   &-status {
-    margin: 0 0 1em;
+    margin: 1em 0 0;
     color: var(--color-red);
+    text-shadow: none;
   }
 
   &-buttons {
     display: flex;
-    justify-content: center;
     flex-wrap: wrap;
     gap: 1rem;
     margin-top: 1.5em;
@@ -106,6 +164,7 @@ const emit = defineEmits<{ close: []; select: [] }>()
   &-button {
     padding: 0.6em 2em;
     font-size: 1em;
+    font-style: normal;
     @include button.framed;
   }
 }
