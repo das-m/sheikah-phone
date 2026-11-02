@@ -65,7 +65,9 @@ const locations = computed(() => props.content?.locations?.split('\n').filter(Bo
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: calc(var(--frame-top) + 1rem) 2rem calc(var(--frame-bottom) + 1rem);
+  // The right side keeps clear of the corner art of the frame (it reaches in beside the panel).
+  padding: calc(var(--frame-top) + 1rem) calc(var(--frame-corner-br) + 1.5rem)
+    calc(var(--frame-bottom) + 1rem) 2rem;
   background: rgba(4, 6, 16, 0.88);
 
   // Two columns in landscape (picture | texts), one in a narrow window.

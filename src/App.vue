@@ -32,7 +32,7 @@ const showLoader = ref(false)
 const hack = ref<'' | 'to-yiga' | 'to-sheikah'>('')
 // The look of the loader for the app that opens or closes (the lens is purple). Only changed together with `show()`.
 const loaderVariant = ref<LoaderVariant>('')
-// An app opened straight from another one (the scanner's "select" to the map): no loader, no sound, no waiting.
+// An app opened straight from another one (the scanner's "select" to the map): no loader and no sound; the new app starts its intro right after the old one has faded out.
 const isDirect = ref(false)
 const route = useRoute()
 
@@ -132,9 +132,9 @@ watch(mode, (value) => {
       --screen-delay: 1s;
     }
 
-    // Straight from another app: nothing to wait for.
+    // Straight from another app: only the app that leaves fades out (0.3 s), then the new one starts its own intro.
     &--direct {
-      --screen-delay: 0s;
+      --screen-delay: 0.3s;
     }
 
     // After a mode switch: the hack (3.6 s) and the exit of the loader (0.65 s) play first.
