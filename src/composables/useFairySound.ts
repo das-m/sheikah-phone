@@ -5,6 +5,10 @@ import soundFairyAlarm from '@/assets/audio/fairy-alarm-01.ogg'
 import soundFairyFloat from '@/assets/audio/fairy-float.ogg'
 import soundFairyHello from '@/assets/audio/fairy-hello.ogg'
 import soundFairyHey from '@/assets/audio/fairy-hey.ogg'
+import soundFairyIn1 from '@/assets/audio/fairy-in-01.ogg'
+import soundFairyIn2 from '@/assets/audio/fairy-in-02.ogg'
+import soundFairyOut1 from '@/assets/audio/fairy-out-01.ogg'
+import soundFairyOut2 from '@/assets/audio/fairy-out-02.ogg'
 import soundFairyLook1 from '@/assets/audio/fairy-look-01.ogg'
 import soundFairyLook2 from '@/assets/audio/fairy-look-02.ogg'
 import soundFairyLook3 from '@/assets/audio/fairy-look-03.ogg'
@@ -33,7 +37,11 @@ const voiceUrls = {
   /** She starts her next movement. */
   move: [soundFairyMove1, soundFairyMove2, soundFairyMove3],
   /** She calls "Look!" from her hiding place. */
-  look: [soundFairyLook1, soundFairyLook2, soundFairyLook3]
+  look: [soundFairyLook1, soundFairyLook2, soundFairyLook3],
+  /** She appears at her hiding place. */
+  in: [soundFairyIn1, soundFairyIn2],
+  /** She flies away. */
+  out: [soundFairyOut1, soundFairyOut2]
 }
 
 export type FairyVoice = keyof typeof voiceUrls

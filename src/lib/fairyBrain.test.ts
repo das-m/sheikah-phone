@@ -421,16 +421,17 @@ describe('voices', () => {
 describe('move events', () => {
   it('sounds when she is triggered into each new movement, and not in between', () => {
     const r = setup()
+    const count = (event: FairyEvent) => r.events.filter((e) => e === event).length
     r.run(10, away)
-    expect(r.events).not.toContain('move')
+    expect([count('move'), count('in'), count('out')]).toEqual([0, 0, 0])
     r.run(5.2, track)
-    expect(r.events.filter((e) => e === 'move')).toHaveLength(1) // escape
+    expect(count('move')).toBe(1) // escape
     r.run(5.2, track)
-    expect(r.events.filter((e) => e === 'move')).toHaveLength(2) // flee
+    expect(count('out')).toBe(1) // she flies away
     r.run(0.9, fixed(north))
-    expect(r.events.filter((e) => e === 'move')).toHaveLength(3) // she appears behind the player
+    expect(count('in')).toBe(1) // she appears behind the player
     r.run(5, fixed(north))
-    expect(r.events.filter((e) => e === 'move')).toHaveLength(3)
+    expect([count('move'), count('in'), count('out')]).toEqual([1, 1, 1])
   })
 
   it('also sounds when the friendship starts', () => {

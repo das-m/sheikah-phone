@@ -7,8 +7,10 @@ export type FairyPhase = 'swirl' | 'escape' | 'flee' | 'hidden' | 'befriend' | '
 /**
  * `hey`: her call. `burst`: a shower of sparkles. `move`: she is triggered and starts her next movement.
  * `hello`: first contact. `look`: she calls from her hiding place. `alarm`: she was found. `sad`: she was lost.
+ * `out`: she flies away. `in`: she appears at her hiding place.
  */
-export type FairyEvent = 'hey' | 'burst' | 'move' | 'hello' | 'look' | 'alarm' | 'sad'
+export type FairyEvent =
+  'hey' | 'burst' | 'move' | 'hello' | 'look' | 'alarm' | 'sad' | 'in' | 'out'
 
 /** Tunables, see `game/fairy.ts` for what each one does. Seconds, degrees, metres. */
 export interface FairyConfig {
@@ -291,7 +293,7 @@ export function createFairyBrain(config: FairyConfig, rng: () => number = Math.r
     fleeFrom = position
     resetHold()
     if (!afterFind) events.push('hey')
-    events.push('move')
+    events.push('out')
   }
 
   /** She appears behind the player, at the distance of the current round. */
@@ -306,7 +308,7 @@ export function createFairyBrain(config: FairyConfig, rng: () => number = Math.r
     resetHold()
     blendFrom = null
     jumped = true
-    events.push('move', 'look')
+    events.push('in', 'look')
   }
 
   function startBefriend() {
