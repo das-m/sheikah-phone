@@ -1,10 +1,12 @@
+import { sensors } from '@/game/sensors'
 import { boxFromLayout, normalizeCode, type FrameBox } from '@/lib/scan'
 
 /**
- * What a scanned target does. Phase one only shows a modal; the sensor mode of the map app comes next as another member
- * (`useScanAction` is the one place that runs them).
+ * What a scanned target does (`useScanAction` is the one place that runs them): `modal` shows a text, `sensor` offers
+ * the sensor event of `game/sensors.ts` (select it and the map's sensor mode starts).
  */
-export type ScanAction = { type: 'modal'; title: string; text: string }
+export type ScanAction =
+  { type: 'modal'; title: string; text: string } | { type: 'sensor'; sensorId: string }
 
 export interface ScanTarget {
   /** The whole QR payload: the id and nothing else. Digits only, see `scanTargets`. */
@@ -37,18 +39,14 @@ export const cardFrame: FrameBox = boxFromLayout({
 })
 
 /**
- * Everything the scanner reacts to. Placeholders: set the real names and texts before the hunt.
+ * Everything the scanner reacts to: one target per sensor event (`game/sensors.ts` is where the content is edited).
  * Ids are short digit strings: that keeps every code at QR version 1 (21x21 modules) with the strongest error
  * correction, the smallest size a QR code has. They are strings, `01` is not `1`.
  */
-export const scanTargets: ScanTarget[] = Array.from({ length: 9 }, (_, i) => ({
-  id: String(i + 1).padStart(2, '0'),
-  name: `Pflanze ${i + 1}`,
-  action: {
-    type: 'modal' as const,
-    title: `Pflanze ${i + 1}`,
-    text: 'Hier steht später, was die Tafel über diese Pflanze verrät.'
-  },
+export const scanTargets: ScanTarget[] = sensors.map((sensor) => ({
+  id: sensor.id,
+  name: sensor.name,
+  action: { type: 'sensor', sensorId: sensor.id },
   frame: cardFrame
 }))
 

@@ -351,6 +351,30 @@ describe('createTracker', () => {
     expect(t.step(600)?.confirmed).toBe(false)
   })
 
+  it('counts how long a code has been held since it was confirmed', () => {
+    const t = createTracker({ frames: 2, holdMs: 300 })
+    t.update(detection('a'), 0)
+    expect(t.step(0)?.heldMs).toBe(0)
+    t.update(detection('a'), 100)
+    expect(t.step(100)?.heldMs).toBe(0)
+    t.update(detection('a'), 200)
+    expect(t.step(300)?.heldMs).toBe(200)
+    t.update(detection('a'), 1100)
+    expect(t.step(1100)?.heldMs).toBe(1000)
+  })
+
+  it('keeps counting through a missed reading but restarts after a drop', () => {
+    const t = createTracker({ frames: 2, holdMs: 300 })
+    t.update(detection('a'), 0)
+    t.update(detection('a'), 100)
+    t.update(null, 200)
+    expect(t.step(250)?.heldMs).toBe(150)
+    expect(t.step(900)).toBeNull()
+    t.update(detection('a'), 1000)
+    t.update(detection('a'), 1100)
+    expect(t.step(1200)?.heldMs).toBe(100)
+  })
+
   it('switches to another code and starts it unconfirmed', () => {
     const t = createTracker({ frames: 2 })
     t.update(detection('a'), 0)

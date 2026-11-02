@@ -222,6 +222,8 @@ export interface TrackedCode {
   /** Smoothed corners, in the coordinates the detection was fed in. */
   corners: Quad
   confirmed: boolean
+  /** How long the code has been confirmed without being dropped, in ms; 0 until it is confirmed. */
+  heldMs: number
 }
 
 /**
@@ -239,6 +241,7 @@ export function createTracker(options: Partial<TrackerOptions> = {}) {
   let lastStep = 0
   let streak = 0
   let confirmed = false
+  let confirmedAt = 0
 
   function clear() {
     value = target = shown = null
@@ -267,7 +270,10 @@ export function createTracker(options: Partial<TrackerOptions> = {}) {
       target = detection.corners
       lastSeen = timeMs
       streak++
-      if (streak >= frames) confirmed = true
+      if (streak >= frames && !confirmed) {
+        confirmed = true
+        confirmedAt = timeMs
+      }
     },
     /**
      * The code to draw at `timeMs`, or null when none is being followed. `frameWidth` is the width of the frame that
@@ -289,7 +295,7 @@ export function createTracker(options: Partial<TrackerOptions> = {}) {
         y: p.y + (goal[i].y - p.y) * alpha
       }))
       shown = [a, b, c, d]
-      return { value, corners: shown, confirmed }
+      return { value, corners: shown, confirmed, heldMs: confirmed ? timeMs - confirmedAt : 0 }
     },
     reset: clear
   }

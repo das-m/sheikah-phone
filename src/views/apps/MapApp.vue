@@ -5,14 +5,18 @@ import 'maplibre-gl/dist/maplibre-gl.css'
 import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?url'
 import { onMounted, onUnmounted, ref, watch } from 'vue'
 
+import soundSensorDeactivate from '@/assets/audio/sensor-touch.ogg'
 import markerIconArea from '@/assets/images/map/area.png'
 import BackButton from '@/components/BackButton.vue'
 import ClockWidget from '@/components/widgets/ClockWidget.vue'
 import WeatherWidget from '@/components/widgets/WeatherWidget.vue'
 import { useGeolocation } from '@/composables/useGeolocation'
 import { useHeading } from '@/composables/useHeading'
+import { useSensorBeeper } from '@/composables/useSensorBeeper'
+import { useSensorMode } from '@/composables/useSensorMode'
 import { areas, pois, regions } from '@/game/markers'
 import type { Area, Poi, Region, Visibility } from '@/game/markers'
+import { playSound } from '@/lib/audio'
 import { metersPerPixel } from '@/lib/geo'
 import type { LatLng } from '@/lib/geo'
 import { zoomOpacity } from '@/lib/zoomVisibility'
@@ -31,6 +35,16 @@ const MAX_AREA_OUTLINE_PX = 4000
 
 const { position: userPosition } = useGeolocation()
 const { heading } = useHeading()
+
+// Sensor mode: the scanner selects a sensor, it beeps while the map is open, the icon deactivates it.
+const { active: activeSensor, deactivate: deactivateSensor } = useSensorMode()
+useSensorBeeper()
+const audioSensorDeactivate = new Audio(soundSensorDeactivate)
+
+function onSensorTap() {
+  playSound(audioSensorDeactivate)
+  deactivateSensor()
+}
 
 const root = ref<HTMLElement | null>(null)
 const container = ref<HTMLElement | null>(null)
@@ -274,6 +288,16 @@ function centerMapOnUser() {
       <BackButton />
 
       <div class="App-map-button App-map-button--recenter" @click="centerMapOnUser"></div>
+
+      <!-- The active sensor; dimmed when it has no location (nothing to measure, so it is silent). Tap: deactivate. -->
+      <button
+        type="button"
+        class="App-map-sensor"
+        :class="{ 'App-map-sensor--silent': !activeSensor.location }"
+        v-if="activeSensor"
+        :aria-label="`Sensor ${activeSensor.name} ausschalten`"
+        @click="onSensorTap"
+      ></button>
 
       <div class="App-map-widgets">
         <ClockWidget />
@@ -554,6 +578,29 @@ $settle-delay: 0.6s;
           background-image: url(@/assets/images/ui/icons/recenter.svg);
           background-size: 55%;
         }
+      }
+    }
+
+    // sensor.png is 225x55, the label of the active sensor, left of the recenter button.
+    &-sensor {
+      position: absolute;
+      z-index: 100;
+      bottom: calc(var(--frame-bottom) + 8px + 12px);
+      right: calc(var(--frame-corner-br) + 8px + 80px + 12px);
+      width: 225px;
+      height: 55px;
+      padding: 0;
+      border: 0;
+      background: rgba(0, 0, 0, 0.45) url(@/assets/images/map/sensor.png) center / contain no-repeat;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+
+      &:hover {
+        background-color: rgba(0, 0, 0, 0.8);
+      }
+
+      &--silent {
+        opacity: 0.5;
       }
     }
 

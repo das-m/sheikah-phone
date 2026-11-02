@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { findSensor, sensors } from './sensors'
 import { aroundCode, cardFrame, findTarget, scanTargets } from './scanTargets'
 
 describe('scanTargets', () => {
@@ -24,6 +25,34 @@ describe('scanTargets', () => {
       '08',
       '09'
     ])
+  })
+})
+
+describe('sensors', () => {
+  it('points every target at an existing sensor event with the same id', () => {
+    for (const target of scanTargets) {
+      expect(target.action.type).toBe('sensor')
+      if (target.action.type === 'sensor') {
+        expect(findSensor(target.action.sensorId)?.id).toBe(target.id)
+      }
+    }
+  })
+
+  it('has unique sensor ids and a reason for every unavailable one', () => {
+    expect(new Set(sensors.map((s) => s.id)).size).toBe(sensors.length)
+    for (const sensor of sensors.filter((s) => s.status === 'unavailable')) {
+      expect(sensor.statusText).toBeTruthy()
+    }
+  })
+
+  it('keeps sensor locations near Ludwigsburg', () => {
+    for (const { location } of sensors) {
+      if (!location) continue
+      expect(location.lat).toBeGreaterThan(48.8)
+      expect(location.lat).toBeLessThan(49.0)
+      expect(location.lng).toBeGreaterThan(9.0)
+      expect(location.lng).toBeLessThan(9.4)
+    }
   })
 })
 

@@ -15,8 +15,12 @@ import { playSound } from '@/lib/audio'
 
 import soundSystemError from '@/assets/audio/error.ogg'
 import soundDetect from '@/assets/audio/camera-detect.ogg'
+import soundSensorActivate from '@/assets/audio/sensor-activate.ogg'
+import soundSensorError from '@/assets/audio/sensor-error.ogg'
 const audioSystemError = new Audio(soundSystemError)
 const audioDetect = new Audio(soundDetect)
+const audioSensorActivate = new Audio(soundSensorActivate)
+const audioSensorError = new Audio(soundSensorError)
 
 /** How long the "unknown code" note stays after a manual entry. */
 const NOTE_MS = 2500
@@ -35,7 +39,7 @@ const { isReady, hasFailed } = useCamera(videoEl, {
   height: { ideal: 1080 }
 })
 
-const { modal, run, close } = useScanAction()
+const { modal, run, close, select } = useScanAction()
 // Scanning rests while the modal is open and takes up again when it is closed.
 const isScanning = computed(() => isReady.value && modal.value === null)
 const scan = useCodeScanner(videoEl, isScanning)
@@ -44,7 +48,14 @@ const scan = useCodeScanner(videoEl, isScanning)
 let quietUntil = 0
 watch(modal, (content, before) => {
   if (before && !content) quietUntil = performance.now() + QUIET_AFTER_MODAL_MS
+  // An event that cannot be selected (extinct, out of season): the modal only says why.
+  if (content && !before && content.statusText) playSound(audioSensorError)
 })
+
+function onSelect() {
+  playSound(audioSensorActivate)
+  select()
+}
 
 function onConfirm() {
   if (performance.now() >= quietUntil) playSound(audioDetect)
@@ -125,7 +136,7 @@ onUnmounted(() => {
         </button>
       </div>
 
-      <ScanModal :content="modal" @close="close" />
+      <ScanModal :content="modal" @close="close" @select="onSelect" />
     </div>
   </Transition>
 </template>

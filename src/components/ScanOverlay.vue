@@ -18,6 +18,8 @@ const FRAME_SIZE = 100
 /** Space kept free at the bottom (above the frame art) for the label and the row of buttons below it, in px. */
 const LABEL_ROOM = 110
 const LABEL_GAP = 12
+/** How long a recognised code must be held in view before it opens by itself (the frame fills up meanwhile). */
+const HOLD_MS = 1000
 
 const props = defineProps<{
   video: HTMLVideoElement | null
@@ -27,7 +29,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   /** A code was recognised (once per time it comes into view). */
   confirm: [target: ScanTarget]
-  /** The label of a recognised code was tapped. */
+  /** A recognised code was held in view for `HOLD_MS`, or its label was tapped. */
   open: [target: ScanTarget]
 }>()
 
@@ -41,12 +43,18 @@ const tracker = createTracker()
 let current: ScanTarget | null = null
 let seenSeq = -1
 let frame = 0
+// A code that opened by itself does not open again until it was out of view: scanning rests under the modal, so a
+// code still held when it closes would otherwise open it over and over.
+let isArmed = true
 // The overlay covers the whole screen, the frame art included: the label must stay above the bottom art.
 let insetBottom = 0
 let observer: ResizeObserver | null = null
 
 function hide() {
-  if (frameEl.value) frameEl.value.style.visibility = 'hidden'
+  if (frameEl.value) {
+    frameEl.value.style.visibility = 'hidden'
+    frameEl.value.style.setProperty('--hold', '0')
+  }
   if (labelEl.value) labelEl.value.style.visibility = 'hidden'
   current = null
   if (isConfirmed.value) isConfirmed.value = false
@@ -65,6 +73,8 @@ function tick(now: number) {
     // Codes that are not ours (a URL, a foreign QR) get no overlay. TODO(multi): follow every known code.
     const known = props.scan.detections.filter((d) => findTarget(d.value))
     tracker.update(pickDetection(known, tracker.value), now)
+    // A reading without any of our codes: the last one that opened is gone, the next one may open again.
+    if (known.length === 0) isArmed = true
   }
   // The frame is drawn from the code: a big one (a whole card) multiplies the code's jitter, so it is smoothed more.
   const followed = tracker.value === null ? null : findTarget(tracker.value)
@@ -88,6 +98,15 @@ function tick(now: number) {
     if (tracked.confirmed) emit('confirm', target)
   }
 
+  // Holding the code fills the frame (`--hold`, 0..1); at the end the code opens by itself. Written from here, like the
+  // transform, so Vue does not re-render 60 times a second.
+  const hold = !tracked.confirmed ? 0 : isArmed ? Math.min(1, tracked.heldMs / HOLD_MS) : 1
+  frameNode.style.setProperty('--hold', hold.toFixed(3))
+  if (hold >= 1 && isArmed) {
+    isArmed = false
+    emit('open', target)
+  }
+
   frameNode.style.visibility = 'visible'
   frameNode.style.transform = `matrix3d(${matrix.join(',')})`
 
@@ -101,7 +120,9 @@ function tick(now: number) {
 }
 
 function onOpen() {
-  if (current && isConfirmed.value) emit('open', current)
+  if (!current || !isConfirmed.value) return
+  isArmed = false
+  emit('open', current)
 }
 
 onMounted(() => {
@@ -163,13 +184,30 @@ onUnmounted(() => {
       border-color 0.2s;
     will-change: transform;
 
+    // Holding the code (`--hold`, 0..1, set from the script): the border thickens and glows, and a bar along the
+    // bottom edge of the frame fills up.
     &--confirmed {
       border-color: var(--color-primary);
+      border-width: calc(3px + var(--hold, 0) * 3px);
       box-shadow:
-        0 0 14px var(--color-primary),
-        inset 0 0 14px color-mix(in srgb, var(--color-primary) 50%, transparent);
+        0 0 calc(14px + var(--hold, 0) * 22px) calc(var(--hold, 0) * 3px) var(--color-primary),
+        inset 0 0 calc(14px + var(--hold, 0) * 18px)
+          color-mix(in srgb, var(--color-primary) 50%, transparent);
       opacity: 1;
       animation: pulse 1.6s ease-in-out infinite;
+    }
+
+    &::after {
+      content: '';
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      height: 8px;
+      background: var(--color-primary);
+      box-shadow: 0 0 8px var(--color-primary);
+      transform: scaleX(var(--hold, 0));
+      transform-origin: 0 50%;
     }
   }
 
