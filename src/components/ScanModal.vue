@@ -56,6 +56,8 @@ const locations = computed(() => props.content?.locations?.split('\n').filter(Bo
 </template>
 
 <style lang="scss" scoped>
+@use '@/assets/scss/button';
+
 .ScanModal {
   position: fixed;
   z-index: 100;
@@ -76,7 +78,7 @@ const locations = computed(() => props.content?.locations?.split('\n').filter(Bo
     max-height: 100%;
     overflow-y: auto;
     color: var(--color-primary);
-    font-family: OpenSans, sans-serif;
+    font-family: Roboto, sans-serif;
     font-style: italic;
     text-shadow: 0 0 8px color-mix(in srgb, var(--color-primary) 60%, transparent);
 
@@ -91,8 +93,8 @@ const locations = computed(() => props.content?.locations?.split('\n').filter(Bo
 
   &-title {
     margin: 0 0 0.5em;
-    font-size: 1.4em;
-    font-weight: 600;
+    font-size: 1.2em;
+    font-weight: 500;
     line-height: 1.2;
     text-align: center;
     text-shadow: 0 0 8px var(--color-primary);
@@ -138,7 +140,7 @@ const locations = computed(() => props.content?.locations?.split('\n').filter(Bo
   &-location {
     margin: 0 0 1em;
     padding: 0 0.3em;
-    font-size: 1.15em;
+    font-size: 1em;
     line-height: 1.3;
   }
 
@@ -154,92 +156,16 @@ const locations = computed(() => props.content?.locations?.split('\n').filter(Bo
 
   &-buttons {
     display: flex;
-    flex-direction: column;
-    gap: 0.8rem;
-    max-width: 22rem;
+    flex-wrap: wrap;
+    gap: 1rem;
     margin-top: 1.5em;
   }
 
-  // A flat stone-grey plate with a thin edge; pressed or focused it turns near-black with a glowing cream edge and
-  // cut corners. The shape is two stacked layers (edge, then fill 2 px smaller), so the glow (a drop-shadow on the
-  // button) follows the cut corners; `clip-path` on the button itself would cut the glow off.
   &-button {
-    --cut: 0.6rem;
-    --edge: 2px;
-
-    position: relative;
-    isolation: isolate;
-    padding: 0.7em 1.5em;
-    border: 0;
-    background: none;
-    color: var(--color-contrast);
-    font-family: OpenSans, sans-serif;
-    font-style: italic;
-    font-weight: 600;
-    font-size: 1.15em;
-    text-shadow: none;
-    cursor: pointer;
-    -webkit-tap-highlight-color: transparent;
-    transition: filter 0.15s;
-
-    &::before,
-    &::after {
-      content: '';
-      position: absolute;
-      z-index: -1;
-      border-radius: 0.3rem;
-    }
-
-    &::before {
-      inset: 0;
-      background: rgba(226, 222, 211, 0.22);
-    }
-
-    &::after {
-      inset: 1px;
-      background: #2a2a26;
-    }
-
-    &:hover,
-    &:active,
-    &:focus-visible {
-      outline: none;
-      filter: drop-shadow(0 0 0.35rem rgba(240, 232, 200, 0.7));
-
-      &::before,
-      &::after {
-        border-radius: 0;
-      }
-
-      &::before {
-        background: #efe8cc;
-        clip-path: polygon(
-          var(--cut) 0,
-          calc(100% - var(--cut)) 0,
-          100% var(--cut),
-          100% calc(100% - var(--cut)),
-          calc(100% - var(--cut)) 100%,
-          var(--cut) 100%,
-          0 calc(100% - var(--cut)),
-          0 var(--cut)
-        );
-      }
-
-      &::after {
-        inset: var(--edge);
-        background: #0f0f0b;
-        clip-path: polygon(
-          calc(var(--cut) - var(--edge) * 0.4) 0,
-          calc(100% - var(--cut) + var(--edge) * 0.4) 0,
-          100% calc(var(--cut) - var(--edge) * 0.4),
-          100% calc(100% - var(--cut) + var(--edge) * 0.4),
-          calc(100% - var(--cut) + var(--edge) * 0.4) 100%,
-          calc(var(--cut) - var(--edge) * 0.4) 100%,
-          0 calc(100% - var(--cut) + var(--edge) * 0.4),
-          0 calc(var(--cut) - var(--edge) * 0.4)
-        );
-      }
-    }
+    padding: 0.6em 2em;
+    font-size: 0.9em;
+    font-style: normal;
+    @include button.framed;
   }
 }
 

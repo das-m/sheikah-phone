@@ -10,6 +10,7 @@ import { useYigaMode } from './composables/useYigaMode'
 import { useYigaLoop } from './composables/useYigaLoop'
 import { useYigaTrigger } from './composables/useYigaTrigger'
 import { isRouteAvailable, loaderVariantFor, type LoaderVariant } from './game/apps'
+import { isDirectNavigation } from './lib/navigation'
 import { playClose, playOpen } from './lib/uiSounds'
 
 const { mode } = useYigaMode()
@@ -31,6 +32,8 @@ const showLoader = ref(false)
 const hack = ref<'' | 'to-yiga' | 'to-sheikah'>('')
 // The look of the loader for the app that opens or closes (the lens is purple). Only changed together with `show()`.
 const loaderVariant = ref<LoaderVariant>('')
+// An app opened straight from another one (the scanner's "select" to the map): no loader, no sound, no waiting.
+const isDirect = ref(false)
 const route = useRoute()
 
 watch(
@@ -42,6 +45,13 @@ watch(
     if (!isRouteAvailable(oldPath, mode.value)) return
 
     hack.value = ''
+    isDirect.value = isDirectNavigation()
+    if (isDirect.value) {
+      clearTimeout(loaderTimer)
+      showLoader.value = false
+      return
+    }
+
     // Leaving an app plays its loader too, so the lens closes in purple as well.
     loaderVariant.value = loaderVariantFor(route.path) || loaderVariantFor(oldPath)
     show()
@@ -80,7 +90,14 @@ watch(mode, (value) => {
     <InstallGate />
 
     <main
-      :class="['Phone-main', { 'Phone-main--booting': isBooting, 'Phone-main--hacking': hack }]"
+      :class="[
+        'Phone-main',
+        {
+          'Phone-main--booting': isBooting,
+          'Phone-main--hacking': hack,
+          'Phone-main--direct': isDirect
+        }
+      ]"
       id="main"
     >
       <SheikahLoader :show="showLoader" :hack="hack" :variant="loaderVariant" />
@@ -113,6 +130,11 @@ watch(mode, (value) => {
     // The first screen is mounted while the boot screen dissolves (1.2 s), so it has less to wait for.
     &--booting {
       --screen-delay: 1s;
+    }
+
+    // Straight from another app: nothing to wait for.
+    &--direct {
+      --screen-delay: 0s;
     }
 
     // After a mode switch: the hack (3.6 s) and the exit of the loader (0.65 s) play first.

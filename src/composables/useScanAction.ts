@@ -74,7 +74,7 @@ export function useScanAction() {
     if (!pending) return
     activate(pending)
     close()
-    router.push({ name: 'map' })
+    router.push({ name: 'map', state: { direct: true } })
   }
 
   return { modal, run, close, select }

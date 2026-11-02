@@ -19,6 +19,7 @@ import type { Area, Poi, Region, Visibility } from '@/game/markers'
 import { playSound } from '@/lib/audio'
 import { metersPerPixel } from '@/lib/geo'
 import type { LatLng } from '@/lib/geo'
+import { isDirectNavigation } from '@/lib/navigation'
 import { zoomOpacity } from '@/lib/zoomVisibility'
 import { zeldaStyle } from '@/map/zeldaStyle'
 
@@ -49,6 +50,8 @@ function onSensorTap() {
 const root = ref<HTMLElement | null>(null)
 const container = ref<HTMLElement | null>(null)
 const revealed = ref(false)
+// Arrived straight from another app (the scanner's "select"): no intro, the map is simply there.
+const isDirect = isDirectNavigation()
 
 let map: maplibregl.Map | null = null
 let userMarker: maplibregl.Marker | null = null
@@ -204,7 +207,7 @@ function scheduleReveal(m: maplibregl.Map) {
   const screenDelay = root.value
     ? parseFloat(getComputedStyle(root.value).getPropertyValue('--screen-delay')) || 0
     : 0
-  const earliest = reducedMotion ? 0 : screenDelay * 1000 + REVEAL_AFTER_MS
+  const earliest = reducedMotion || isDirect ? 0 : screenDelay * 1000 + REVEAL_AFTER_MS
 
   let timerDone = false
   let mapDone = false
@@ -287,7 +290,7 @@ function centerMapOnUser() {
 </script>
 
 <template>
-  <div ref="root" class="App" :class="{ 'App--revealed': revealed }">
+  <div ref="root" class="App" :class="{ 'App--revealed': revealed, 'App--direct': isDirect }">
     <!-- Intro in four beats (timings in the style block): grid, user marker, map reveal, markers and buttons. -->
     <div class="App-grid"></div>
     <div ref="container" class="App-map"></div>
@@ -700,24 +703,35 @@ $settle-delay: 0.6s;
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .App-grid,
-  .App-ui,
-  .App-map :deep(.maplibregl-canvas),
-  .App-map :deep(.App-map-marker),
-  .App-map :deep(.App-map-position-arrow),
-  .App-map :deep(.App-map-position-cone),
-  .App-map :deep(.App-map-position-ping) {
+// No intro: reduced motion, or arriving straight from another app (class App--direct). Included at the root of the screen.
+@mixin no-intro {
+  & .App-grid,
+  & .App-ui,
+  & .App-map :deep(.maplibregl-canvas),
+  & .App-map :deep(.App-map-marker),
+  & .App-map :deep(.App-map-position-arrow),
+  & .App-map :deep(.App-map-position-cone),
+  & .App-map :deep(.App-map-position-ping) {
     animation: none !important;
     transition: none !important;
   }
 
-  .App-map :deep(.maplibregl-canvas) {
+  & .App-map :deep(.maplibregl-canvas) {
     clip-path: none;
   }
 
-  .App-map :deep(.App-map-position-ping) {
+  & .App-map :deep(.App-map-position-ping) {
     display: none;
   }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .App {
+    @include no-intro;
+  }
+}
+
+.App--direct {
+  @include no-intro;
 }
 </style>
