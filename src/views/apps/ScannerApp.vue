@@ -98,7 +98,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <Transition name="fade" appear>
+  <Transition name="lens" appear>
     <div class="App">
       <BackButton />
       <template v-if="!hasFailed">
@@ -167,13 +167,16 @@ onUnmounted(() => {
   );
   --lens-cy: calc(var(--lens-top) + var(--lens-d) / 2);
   background: radial-gradient(circle at 50% var(--lens-cy), #1c1040, #07040f 80%);
+  // The lens does not wait for the loader to be gone (`--screen-delay`): it fades in as the loader's exit (0.65 s)
+  // begins and is opaque before the loader lets go, so the blue swirl behind never shows.
+  --lens-in: calc(var(--screen-delay) - 0.65s);
 
   @include camera.stage($scope: false);
 
   &-camera {
     clip-path: circle(calc(var(--lens-d) / 2) at 50% var(--lens-cy));
     // The lens opens like an iris once the loader is done (the same clip-path trick as the map's reveal).
-    animation: lens-open 0.9s var(--screen-delay) ease-out both;
+    animation: lens-open 0.9s var(--lens-in) ease-out both;
   }
 
   &-lens {
@@ -246,6 +249,19 @@ onUnmounted(() => {
     font-size: 0.9em;
     @include button.framed(0.6);
   }
+}
+
+.lens-enter-active {
+  transition: opacity 0.4s var(--lens-in) ease;
+}
+
+.lens-leave-active {
+  transition: opacity 0.3s ease;
+}
+
+.lens-enter-from,
+.lens-leave-to {
+  opacity: 0;
 }
 
 @keyframes lens-open {
