@@ -47,16 +47,27 @@ export function fairySpeed(tSec: number): number {
   return Math.hypot(b.x - a.x, b.y - a.y, b.z - a.z) / dt
 }
 
-/** Her sound plays at this rate when she is slow and fast. The fast end is the one to tune by ear. */
-const SOUND_RATE_SLOW = 0.85
-const SOUND_RATE_FAST = 1.35
-/** Speed (m/s) at which the sound reaches its fast rate. */
+/** Her sound plays at this rate when she is slow and at her usual top speed. These are the ones to tune by ear. */
+const SOUND_RATE_SLOW = 0.95
+const SOUND_RATE_FAST = 1.15
+/** Speed (m/s) at which the sound reaches its fast rate: about the top speed of her calm path. */
 const SOUND_SPEED_FULL = 1.4
+/** Only a real dash (the dart, the flight away) goes beyond that, up to this rate at `SOUND_SPEED_DASH`. */
+const SOUND_RATE_DASH = 1.35
+const SOUND_SPEED_DASH = 4
 
 /** Playback rate (pitch and tempo) for the fairy sound at a given speed: faster flight, faster and higher sound. */
 export function fairyPlaybackRate(speed: number): number {
   const t = Math.min(Math.max(speed / SOUND_SPEED_FULL, 0), 1)
-  return SOUND_RATE_SLOW + (SOUND_RATE_FAST - SOUND_RATE_SLOW) * t
+  const dash = Math.min(
+    Math.max((speed - SOUND_SPEED_FULL) / (SOUND_SPEED_DASH - SOUND_SPEED_FULL), 0),
+    1
+  )
+  return (
+    SOUND_RATE_SLOW +
+    (SOUND_RATE_FAST - SOUND_RATE_SLOW) * t +
+    (SOUND_RATE_DASH - SOUND_RATE_FAST) * dash
+  )
 }
 
 /**

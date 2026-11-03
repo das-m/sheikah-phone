@@ -196,7 +196,7 @@ onMounted(() => {
     const camera = toCamera(out.position)
 
     // Nervous she buzzes a little faster.
-    sound.update(camera, fairyPlaybackRate(out.speed) * (1 + 0.2 * out.nervous))
+    sound.update(camera, fairyPlaybackRate(out.speed))
     sound.setLoudness(out.loudness)
     for (const event of out.events) {
       if (event === 'burst') {

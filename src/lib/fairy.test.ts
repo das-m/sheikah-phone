@@ -67,11 +67,17 @@ describe('fairySpeed', () => {
 
 describe('fairyPlaybackRate', () => {
   it('speeds the sound up with the flight and stays within its range', () => {
-    expect(fairyPlaybackRate(0)).toBeCloseTo(0.85)
-    expect(fairyPlaybackRate(1.4)).toBeCloseTo(1.35)
+    expect(fairyPlaybackRate(0)).toBeCloseTo(0.95)
+    expect(fairyPlaybackRate(1.4)).toBeCloseTo(1.15)
     expect(fairyPlaybackRate(0.7)).toBeGreaterThan(fairyPlaybackRate(0.3))
-    expect(fairyPlaybackRate(5)).toBeCloseTo(1.35)
-    expect(fairyPlaybackRate(-1)).toBeCloseTo(0.85)
+    expect(fairyPlaybackRate(-1)).toBeCloseTo(0.95)
+  })
+
+  it('goes beyond the usual range only in a real dash', () => {
+    expect(fairyPlaybackRate(2)).toBeGreaterThan(1.15)
+    expect(fairyPlaybackRate(2)).toBeLessThan(1.25)
+    expect(fairyPlaybackRate(4)).toBeCloseTo(1.35)
+    expect(fairyPlaybackRate(9)).toBeCloseTo(1.35)
   })
 })
 
