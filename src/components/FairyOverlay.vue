@@ -18,15 +18,21 @@ import type { BrainOutput } from '@/lib/fairyBrain'
 import { normalizeDegrees } from '@/lib/geo'
 import type { Vec3 } from '@/lib/gesture'
 
-/** Glow diameter as a fraction of the screen height at 1 m; it shrinks with distance. */
-const GLOW_SIZE = 0.26
-const TRAIL_SPAWN_CALM_MS = 160
-const TRAIL_SPAWN_EXCITED_MS = 30
-const TRAIL_LIFE_CALM_MS = 600
+/** Diameter of her ball (the halo is part of the sprite) as a fraction of the screen height at 1 m; it shrinks with distance. */
+const GLOW_SIZE = 0.12
+/** Diameter of one sparkle at size 1, same unit. */
+const SPARKLE_SIZE = 0.03
+/** Calm she leaves only a rare, small, faint sparkle; worked up it gets dense, long, larger and brighter. */
+const TRAIL_SPAWN_CALM_MS = 450
+const TRAIL_SPAWN_EXCITED_MS = 35
+const TRAIL_LIFE_CALM_MS = 700
 const TRAIL_LIFE_EXCITED_MS = 1100
+const TRAIL_SIZE_CALM = 0.5
+const TRAIL_SIZE_EXCITED = 1.6
+const TRAIL_ALPHA_CALM = 0.5
 /** How far (m) a trail sparkle may drift from the fairy's path when it is born. */
 const TRAIL_SPREAD = 0.05
-const BURST_COUNT = 36
+const BURST_COUNT = 20
 const BURST_SPREAD = 0.35
 const BURST_LIFE_MS = 1500
 const MAX_PIXEL_RATIO = 2
@@ -58,8 +64,8 @@ function labelFor(out: BrainOutput): string {
   switch (out.phase) {
     case 'swirl':
       return 'Schwärmen'
-    case 'escape':
-      return 'Fangen'
+    case 'notice':
+      return 'Aufmerksam'
     case 'flee':
     case 'hidden':
       return `Verstecken ${out.finds + 1}`
@@ -73,7 +79,7 @@ function labelFor(out: BrainOutput): string {
 let frame = 0
 let observer: ResizeObserver | null = null
 
-/** A soft rose dot with a white core, drawn once and scaled for the fairy and each sparkle. */
+/** Her ball: a white core fading into a clearly round rose disc, with a narrow soft halo around it. */
 function createGlowSprite(): HTMLCanvasElement {
   const size = 128
   const sprite = document.createElement('canvas')
@@ -81,9 +87,27 @@ function createGlowSprite(): HTMLCanvasElement {
   const g = sprite.getContext('2d')!
   const gradient = g.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2)
   gradient.addColorStop(0, 'rgba(255, 255, 255, 1)')
-  gradient.addColorStop(0.15, 'rgba(255, 228, 240, 0.9)')
-  gradient.addColorStop(0.4, 'rgba(255, 140, 190, 0.4)')
+  gradient.addColorStop(0.2, 'rgba(255, 232, 244, 1)')
+  gradient.addColorStop(0.4, 'rgba(255, 170, 205, 0.95)')
+  gradient.addColorStop(0.5, 'rgba(255, 140, 190, 0.45)')
+  gradient.addColorStop(0.7, 'rgba(245, 110, 175, 0.12)')
   gradient.addColorStop(1, 'rgba(240, 100, 170, 0)')
+  g.fillStyle = gradient
+  g.fillRect(0, 0, size, size)
+  return sprite
+}
+
+/** A sparkle: a small round dot, almost no halo. */
+function createSparkleSprite(): HTMLCanvasElement {
+  const size = 32
+  const sprite = document.createElement('canvas')
+  sprite.width = sprite.height = size
+  const g = sprite.getContext('2d')!
+  const gradient = g.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2)
+  gradient.addColorStop(0, 'rgba(255, 255, 255, 1)')
+  gradient.addColorStop(0.5, 'rgba(255, 225, 240, 0.9)')
+  gradient.addColorStop(0.8, 'rgba(255, 190, 220, 0.3)')
+  gradient.addColorStop(1, 'rgba(255, 170, 210, 0)')
   g.fillStyle = gradient
   g.fillRect(0, 0, size, size)
   return sprite
@@ -95,6 +119,7 @@ onMounted(() => {
   if (!canvas || !g) return
 
   const glow = createGlowSprite()
+  const dot = createSparkleSprite()
   const sparkles: Sparkle[] = []
   let width = 0
   let height = 0
@@ -112,9 +137,15 @@ onMounted(() => {
   })
   observer.observe(canvas)
 
-  function drawGlow(x: number, y: number, diameter: number, alpha: number) {
+  function drawSprite(
+    sprite: HTMLCanvasElement,
+    x: number,
+    y: number,
+    diameter: number,
+    alpha: number
+  ) {
     g!.globalAlpha = alpha
-    g!.drawImage(glow, x - diameter / 2, y - diameter / 2, diameter, diameter)
+    g!.drawImage(sprite, x - diameter / 2, y - diameter / 2, diameter, diameter)
   }
 
   function addSparkle(
@@ -192,13 +223,16 @@ onMounted(() => {
 
     // Calm: a thin, short trail. Worked up: a dense, long and larger one.
     const e = out.excitement
-    const spawnMs = TRAIL_SPAWN_CALM_MS + (TRAIL_SPAWN_EXCITED_MS - TRAIL_SPAWN_CALM_MS) * e
+    // Squared, so that the trail stays sparse until she is really worked up.
+    const k = e * e
+    const spawnMs = TRAIL_SPAWN_CALM_MS + (TRAIL_SPAWN_EXCITED_MS - TRAIL_SPAWN_CALM_MS) * k
     if (out.alpha > 0.05 && now - lastSpawn >= spawnMs) {
       lastSpawn = now
-      const life = TRAIL_LIFE_CALM_MS + (TRAIL_LIFE_EXCITED_MS - TRAIL_LIFE_CALM_MS) * e
-      const size = 0.7 + 0.8 * e
-      for (let i = 0; i < (e > 0.6 ? 2 : 1); i++) {
-        addSparkle(out.position, TRAIL_SPREAD, now, life, out.alpha, size)
+      const life = TRAIL_LIFE_CALM_MS + (TRAIL_LIFE_EXCITED_MS - TRAIL_LIFE_CALM_MS) * k
+      const size = TRAIL_SIZE_CALM + (TRAIL_SIZE_EXCITED - TRAIL_SIZE_CALM) * k
+      const strength = out.alpha * (TRAIL_ALPHA_CALM + (1 - TRAIL_ALPHA_CALM) * k)
+      for (let i = 0; i < (e > 0.7 ? 2 : 1); i++) {
+        addSparkle(out.position, TRAIL_SPREAD, now, life, strength, size)
       }
     }
     let kept = 0
@@ -213,20 +247,23 @@ onMounted(() => {
       if (!point) continue
       const age = (now - sparkle.born) / sparkle.life
       const twinkle = 0.55 + 0.45 * Math.sin(now * 0.025 + sparkle.phase)
-      drawGlow(
+      drawSprite(
+        dot,
         point.x,
         point.y,
-        height * GLOW_SIZE * point.scale * 0.3 * sparkle.size * (1 - age),
-        0.9 * (1 - age) * twinkle * sparkle.strength
+        height * SPARKLE_SIZE * point.scale * sparkle.size * (1 - 0.5 * age),
+        (1 - age) * twinkle * sparkle.strength
       )
     }
 
     const point = project(camera, width, height)
     if (point && out.alpha > 0) {
-      // She shows that something is going on: calm she pulses slowly, nervous she pulses fast and flickers.
-      const pulse = 1 + 0.12 * Math.sin(t * (6 + 16 * out.nervous))
-      const flicker = 1 - 0.15 * out.nervous * (0.5 + 0.5 * Math.sin(t * 37))
-      drawGlow(
+      // Calm she breathes slowly and gently; only when she is worked up she pulses faster and flickers a little.
+      const e = out.excitement
+      const pulse = 1 + (0.04 + 0.08 * e) * Math.sin(t * (3 + 10 * e))
+      const flicker = 1 - 0.12 * Math.max(0, e - 0.6) * (0.5 + 0.5 * Math.sin(t * 37))
+      drawSprite(
+        glow,
         point.x,
         point.y,
         height * GLOW_SIZE * point.scale * out.glow * pulse,

@@ -3,10 +3,10 @@ import type { Viewport, ViewBasis } from './fairy'
 import { angleDifference, normalizeDegrees } from './geo'
 import type { Vec3 } from './gesture'
 
-export type FairyPhase = 'swirl' | 'escape' | 'flee' | 'hidden' | 'befriend' | 'guide'
+export type FairyPhase = 'swirl' | 'notice' | 'flee' | 'hidden' | 'befriend' | 'guide'
 /**
  * `hey`: her call. `burst`: a shower of sparkles. `move`: she is triggered and starts her next movement.
- * `hello`: first contact. `look`: she calls from her hiding place. `alarm`: she was found. `sad`: she was lost.
+ * `hello`: first contact. `look`: she calls from her hiding place. `alarm`: she was found. `sad`: unused for now.
  * `out`: she flies away. `in`: she appears at her hiding place.
  */
 export type FairyEvent =
@@ -20,21 +20,11 @@ export interface FairyConfig {
   focusGraceSeconds: number
   /** While she is in focus she gets nervous: her position jitters by about this much (metres). */
   nervousJitterMeters: number
-  escapeSeconds: number
-  escapeGraceSeconds: number
-  /** In the game she hovers here in front of the player and hops sideways between the waiting times. */
-  escapeRadius: number
-  escapeElevationRad: number
-  escapeHopMinDeg: number
-  escapeHopMaxDeg: number
-  escapeHopMinSeconds: number
-  escapeHopMaxSeconds: number
-  escapeDwellMinSeconds: number
-  escapeDwellMaxSeconds: number
-  /** Chance (0..1) that a hop is a feint: she starts one way, then goes the other or stays. */
-  escapeFeintChance: number
-  /** She stays within this angle (degrees) of the view direction, so she plays in front and not behind. */
-  escapeFrontLimitDeg: number
+  /** She notices the player: she darts to `noticeNearMeters` in front of the view, then circles the head. */
+  noticeSeconds: number
+  noticeNearMeters: number
+  noticeCircleRadius: number
+  noticeCircleTurns: number
   fleeSeconds: number
   fleeRiseMeters: number
   /** Distance of the hiding place in each round; its length is the number of times she has to be found. */
@@ -133,30 +123,21 @@ export function sphericalToWorld(azimuth: number, elevation: number, radius: num
   return { x: flat * Math.sin(az), y: flat * Math.cos(az), z: radius * Math.sin(elevation) }
 }
 
-/** One sideways hop in the game, as azimuth offsets in degrees from where she started. */
-interface Hop {
-  from: number
-  /** With a feint she first goes `first` of the way (until `FEINT_SPLIT`), then on to `last`. */
-  feint: boolean
-  first: number
-  last: number
-  t: number
-  duration: number
-}
-
-/** The share of the hop time after which a feint turns. */
-const FEINT_SPLIT = 0.4
-
-/** Her azimuth offset (degrees) after the share `u` (0..1) of a hop. */
-export function hopOffset(hop: Pick<Hop, 'feint' | 'first' | 'last'>, u: number): number {
-  if (!hop.feint) return hop.last * smooth(u)
-  if (u < FEINT_SPLIT) return hop.first * smooth(u / FEINT_SPLIT)
-  return hop.first + (hop.last - hop.first) * smooth((u - FEINT_SPLIT) / (1 - FEINT_SPLIT))
-}
-
 /** A small wandering offset of about `meters`, from her own organic path. */
 function bob(tau: number, meters: number): Vec3 {
   return scale(fairyPosition(tau * 1.3 + 7), meters / FAIRY_MEAN_RADIUS)
+}
+
+/**
+ * Where she is around the head while she circles it after the dart, `u` from 0 to 1: one or more turns that start and
+ * end in front of the player, first still `near` metres away, then at `circleRadius`. Azimuth is the offset in degrees.
+ */
+export function noticeOffset(u: number, near: number, circleRadius: number, turns: number) {
+  return {
+    azimuth: 360 * turns * smooth(u),
+    elevation: 0.15 + 0.12 * Math.sin(2 * Math.PI * 2 * u),
+    radius: circleRadius + (near - circleRadius) * (1 - smooth(u * 4))
+  }
 }
 
 /**
@@ -175,7 +156,7 @@ export function befriendOffset(u: number, endDistance: number) {
 
 /**
  * The fairy's story as a state machine, with no browser in it: feed `step` the view each frame, draw what it returns.
- * swirl (focus her for a while) -> escape (she plays, keep her) -> flee, hidden (three times, closer each time) ->
+ * swirl (watch her for a while) -> notice (she darts to the player and circles the head) -> flee, hidden (three times, closer each time) ->
  * befriend -> guide. `skip` jumps to the next stage and `reset` starts over (for testing).
  */
 export function createFairyBrain(config: FairyConfig, rng: () => number = Math.random) {
@@ -193,11 +174,8 @@ export function createFairyBrain(config: FairyConfig, rng: () => number = Math.r
   /** She has noticed the player (the first contact was announced). */
   let met = false
   let lookTimer = 0
-  /** The game: where she hovers (azimuth, degrees), the running hop, the waiting time until the next one. */
-  let escapeAzimuth = 0
-  let hop: Hop | null = null
-  let dwell = 0
-  let lastSide = 1
+  /** Where in front of the player she was when she noticed them (azimuth, degrees): the circle starts there. */
+  let noticeAzimuth = 0
   let fleeFrom: Vec3 = ZERO
   let anchor: Vec3 = ZERO
   let guideAzimuth: number | null = null
@@ -236,63 +214,22 @@ export function createFairyBrain(config: FairyConfig, rng: () => number = Math.r
     blendTime = 0
   }
 
-  /** The player lost her in the catch-me game: back to floating, a little sad. */
-  function enterSwirl() {
-    phase = 'swirl'
+  /** The player has watched her long enough: she notices them, gets excited and darts in front of them. */
+  function enterNotice(view: ViewBasis) {
+    phase = 'notice'
     phaseTime = 0
     resetHold()
-    startBlend()
-    events.push('sad')
-  }
-
-  function enterEscape() {
-    phase = 'escape'
-    phaseTime = 0
-    resetHold()
-    // She starts to play where she is.
-    escapeAzimuth = azimuthDeg(position)
-    hop = null
-    dwell = range(config.escapeDwellMinSeconds, config.escapeDwellMaxSeconds)
+    noticeAzimuth = azimuthDeg(view.forward)
     startBlend()
     events.push('hey', 'move')
   }
 
-  function range(min: number, max: number) {
-    return min + (max - min) * rng()
-  }
-
-  /** Starts a hop: mostly to the other side than the last one, never out of the front arc, sometimes a feint. */
-  function startHop(view: ViewBasis) {
-    const viewAzimuth = azimuthDeg(view.forward)
-    const inFront = (azimuth: number) =>
-      Math.abs(angleDifference(viewAzimuth, azimuth)) <= config.escapeFrontLimitDeg
-    const amplitude = range(config.escapeHopMinDeg, config.escapeHopMaxDeg)
-    let side = rng() < 0.7 ? -lastSide : lastSide
-    if (!inFront(escapeAzimuth + side * amplitude)) side = -side
-    lastSide = side
-    const delta = side * amplitude
-    const feint = rng() < config.escapeFeintChance
-    // A feint goes the other way (if there is room) or ends where she started.
-    const back = -delta * 0.6
-    const goesBack = rng() < 0.5 && inFront(escapeAzimuth + back)
-    hop = {
-      from: escapeAzimuth,
-      feint,
-      first: delta * 0.3,
-      last: feint ? (goesBack ? back : 0) : delta,
-      t: 0,
-      // A feint takes longer, so that the turn is not faster than a plain hop.
-      duration: range(config.escapeHopMinSeconds, config.escapeHopMaxSeconds) * (feint ? 1.5 : 1)
-    }
-  }
-
-  /** She flies up and away. After the catch-me game she calls "hey"; after a find the alarm has sounded already. */
-  function startFlee(afterFind: boolean) {
+  /** She flies up and away (she called "hey" when she noticed the player, or the alarm sounded after a find). */
+  function startFlee() {
     phase = 'flee'
     phaseTime = 0
     fleeFrom = position
     resetHold()
-    if (!afterFind) events.push('hey')
     events.push('out')
   }
 
@@ -334,7 +271,6 @@ export function createFairyBrain(config: FairyConfig, rng: () => number = Math.r
     excitement = 0.15
     nervous = 0
     met = false
-    hop = null
     guideAzimuth = null
     blendFrom = null
     resetHold()
@@ -350,15 +286,15 @@ export function createFairyBrain(config: FairyConfig, rng: () => number = Math.r
     events.push('alarm')
     if (finds >= config.hideRadii.length) startBefriend()
     else if (skipping) placeHidden(view)
-    else startFlee(true)
+    else startFlee()
   }
 
   function skipStage(view: ViewBasis) {
     switch (phase) {
       case 'swirl':
-        enterEscape()
+        enterNotice(view)
         break
-      case 'escape':
+      case 'notice':
       case 'flee':
         placeHidden(view)
         break
@@ -379,8 +315,7 @@ export function createFairyBrain(config: FairyConfig, rng: () => number = Math.r
     switch (phase) {
       case 'swirl':
         return 0.15 + 0.45 * nervous + 0.2 * progress
-      case 'escape':
-        return 0.8
+      case 'notice':
       case 'flee':
       case 'befriend':
         return 1
@@ -402,7 +337,7 @@ export function createFairyBrain(config: FairyConfig, rng: () => number = Math.r
     phaseTime += dt
 
     // She is in focus while she is on the screen (the camera cannot see her, so she shows it herself: `nervous`).
-    const canBeFocused = phase === 'swirl' || phase === 'escape' || phase === 'hidden'
+    const canBeFocused = phase === 'swirl' || phase === 'hidden'
     const onScreen = isOnScreen(
       { x: dot(view.right, position), y: dot(view.up, position), z: dot(view.forward, position) },
       input.viewport,
@@ -427,27 +362,13 @@ export function createFairyBrain(config: FairyConfig, rng: () => number = Math.r
           events.push('hello')
         }
         holdStep(focused, dt, config.focusGraceSeconds)
-        if (hold >= config.focusSeconds) enterEscape()
+        if (hold >= config.focusSeconds) enterNotice(view)
         progress = hold / config.focusSeconds
         break
       }
-      case 'escape': {
+      case 'notice': {
         tau += dt
-        if (hop) {
-          hop.t += dt
-          escapeAzimuth = hop.from + hopOffset(hop, hop.t / hop.duration)
-          if (hop.t >= hop.duration) {
-            hop = null
-            dwell = range(config.escapeDwellMinSeconds, config.escapeDwellMaxSeconds)
-          }
-        } else {
-          dwell -= dt
-          if (dwell <= 0) startHop(view)
-        }
-        const failed = holdStep(focused, dt, config.escapeGraceSeconds)
-        if (failed) enterSwirl()
-        else if (hold >= config.escapeSeconds) startFlee(false)
-        progress = hold / config.escapeSeconds
+        if (phaseTime >= config.noticeSeconds) startFlee()
         break
       }
       case 'flee': {
@@ -507,18 +428,19 @@ export function createFairyBrain(config: FairyConfig, rng: () => number = Math.r
         next = fairyPosition(tau)
         glow = 1 + 0.45 * nervous + 0.3 * progress
         break
-      case 'escape':
-        // In front of the player and fixed in the world between the hops, with a little bobbing.
-        next = add(
-          sphericalToWorld(
-            escapeAzimuth,
-            config.escapeElevationRad + 0.05 * Math.sin(tau * 1.1),
-            config.escapeRadius + 0.1 * Math.sin(tau * 0.8)
-          ),
-          bob(tau, 0.04)
+      case 'notice': {
+        // Darts to the player's face (the blend), then circles the head and ends in front of them again.
+        const u = clamp((phaseTime - BLEND_SECONDS) / (config.noticeSeconds - BLEND_SECONDS), 0, 1)
+        const o = noticeOffset(
+          u,
+          config.noticeNearMeters,
+          config.noticeCircleRadius,
+          config.noticeCircleTurns
         )
-        glow = 1 + 0.45 * nervous + 0.3 * progress
+        next = sphericalToWorld(noticeAzimuth + o.azimuth, o.elevation, o.radius)
+        glow = 1.3
         break
+      }
       case 'hidden':
         next = add(anchor, bob(tau, config.hideBobMeters))
         nextAlpha = clamp(phaseTime / config.hideFadeInSeconds, 0, 1)

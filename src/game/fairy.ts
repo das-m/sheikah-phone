@@ -7,30 +7,21 @@ import type { LatLng } from '@/lib/geo'
  */
 export const fairyConfig: FairyConfig = {
   // The player "has her in focus" while she is inside this central share of the screen. The camera cannot see her,
-  // so she shows it herself: she gets nervous (she shivers by about this much, glows and sparkles more).
+  // so she shows it herself: she glows and sparkles more (a shiver, if set, by about this much).
   focusScreenShare: 0.9,
-  nervousJitterMeters: 0.07,
+  nervousJitterMeters: 0,
 
-  // Phases 1-2: keep her in focus this long, losing her for up to the grace time does not reset it.
-  focusSeconds: 5,
+  // Phase 1: watch her this long, losing her for up to the grace time does not reset it.
+  focusSeconds: 4,
   focusGraceSeconds: 1,
 
-  // Phase 3: she plays catch me: she hovers in front of the player and hops sideways now and then (mostly to the
-  // other side, sometimes a feint). Keep her in focus this long, or start over.
-  escapeSeconds: 5,
-  escapeGraceSeconds: 1.5,
-  escapeRadius: 1.5,
-  escapeElevationRad: 0.2,
-  escapeHopMinDeg: 18,
-  escapeHopMaxDeg: 30,
-  escapeHopMinSeconds: 0.7,
-  escapeHopMaxSeconds: 0.9,
-  escapeDwellMinSeconds: 0.6,
-  escapeDwellMaxSeconds: 1.2,
-  escapeFeintChance: 0.3,
-  escapeFrontLimitDeg: 50,
+  // Phase 2: she notices the player, darts up close in front of the view and circles the head, then flies off.
+  noticeSeconds: 4,
+  noticeNearMeters: 0.5,
+  noticeCircleRadius: 0.7,
+  noticeCircleTurns: 1,
 
-  // Phases 4-6: "hey", she shoots up and fades, then hides behind the player, closer each round.
+  // Phases 3-4: she shoots up and fades, then hides behind the player, closer each round.
   fleeSeconds: 0.8,
   fleeRiseMeters: 8,
   hideRadii: [1.5, 1.2, 0.9],

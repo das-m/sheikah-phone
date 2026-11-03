@@ -5,7 +5,7 @@ import {
   azimuthDeg,
   befriendOffset,
   createFairyBrain,
-  hopOffset,
+  noticeOffset,
   sphericalToWorld
 } from './fairyBrain'
 import type { BrainOutput, FairyBrain, FairyConfig, FairyEvent } from './fairyBrain'
@@ -17,18 +17,10 @@ const config: FairyConfig = {
   nervousJitterMeters: 0.07,
   focusSeconds: 5,
   focusGraceSeconds: 0.5,
-  escapeSeconds: 5,
-  escapeGraceSeconds: 1.5,
-  escapeRadius: 1.5,
-  escapeElevationRad: 0.2,
-  escapeHopMinDeg: 18,
-  escapeHopMaxDeg: 30,
-  escapeHopMinSeconds: 0.7,
-  escapeHopMaxSeconds: 0.9,
-  escapeDwellMinSeconds: 0.6,
-  escapeDwellMaxSeconds: 1.2,
-  escapeFeintChance: 0.3,
-  escapeFrontLimitDeg: 50,
+  noticeSeconds: 4,
+  noticeNearMeters: 0.5,
+  noticeCircleRadius: 0.7,
+  noticeCircleTurns: 1,
   fleeSeconds: 0.8,
   fleeRiseMeters: 8,
   hideRadii: [1.5, 1.2, 0.9],
@@ -122,7 +114,7 @@ function setup() {
 /** Plays through to the first hiding place, looking north when she flees so she hides behind the player. */
 function toFirstHide(r: ReturnType<typeof makeRun>) {
   r.run(5.2, track)
-  r.run(5.2, track)
+  r.run(4.1, track)
   r.run(0.9, fixed(north))
 }
 
@@ -137,11 +129,11 @@ describe('swirl and focus', () => {
     }
   })
 
-  it('turns to the game after the focus was held for long enough, with one "hey"', () => {
+  it('notices the player after the focus was held for long enough, with one "hey"', () => {
     const r = setup()
     expect(r.run(4.8, track).phase).toBe('swirl')
     expect(r.out.focusProgress).toBeGreaterThan(0.9)
-    expect(r.run(0.6, track).phase).toBe('escape')
+    expect(r.run(0.6, track).phase).toBe('notice')
     expect(r.events.filter((e) => e === 'hey')).toHaveLength(1)
   })
 
@@ -149,7 +141,7 @@ describe('swirl and focus', () => {
     const r = setup()
     r.run(3, track)
     r.run(0.3, away)
-    expect(r.run(2.6, track).phase).toBe('escape')
+    expect(r.run(2.6, track).phase).toBe('notice')
   })
 
   it('starts the focus time over after a longer loss', () => {
@@ -160,131 +152,82 @@ describe('swirl and focus', () => {
   })
 })
 
-describe('escape', () => {
-  it('goes back to the swirl when she is lost for longer than the grace time', () => {
+describe('notice', () => {
+  /** Plays up to the moment she notices the player and returns the run, the view fixed where she was. */
+  function noticed() {
     const r = setup()
     r.run(5.2, track)
-    expect(r.out.phase).toBe('escape')
-    r.run(1, away)
-    expect(r.out.phase).toBe('escape')
-    expect(r.run(1, away).phase).toBe('swirl')
-  })
-
-  /** Plays into the game, then watches her for a minute against a view that stays where it was (she cannot be lost). */
-  function watchGame(game: FairyConfig) {
-    // Neither lost nor won: the grace time and the time to hold are endless.
-    const r = makeRun(
-      createFairyBrain(
-        { ...game, escapeGraceSeconds: 1e6, escapeSeconds: 1e6, nervousJitterMeters: 0 },
-        seededRng(3)
-      )
-    )
-    r.run(5.2, track)
-    expect(r.out.phase).toBe('escape')
-    const view = lookAt(r.out.position)
-    const viewAzimuth = azimuthDeg(view.forward)
-    const samples: { az: number; speed: number }[] = []
-    for (let i = 0; i < 1200; i++) {
-      const out = r.run(DT, fixed(view))
-      samples.push({ az: azimuthDeg(out.position), speed: 0 })
-      if (samples.length > 1) {
-        const previous = samples[samples.length - 2].az
-        samples[samples.length - 1].speed =
-          Math.abs(angleDifference(previous, samples[samples.length - 1].az)) / DT
-      }
-    }
-    return { viewAzimuth, samples }
+    expect(r.out.phase).toBe('notice')
+    return r
   }
 
-  it('plays in front of the player: she never leaves the front arc of the view', () => {
-    for (const feintChance of [0, 0.3, 1]) {
-      const { viewAzimuth, samples } = watchGame({ ...config, escapeFeintChance: feintChance })
-      for (const { az } of samples) {
-        // A little extra for her bobbing.
-        expect(Math.abs(angleDifference(viewAzimuth, az))).toBeLessThanOrEqual(
-          config.escapeFrontLimitDeg + 4
-        )
-      }
+  it('darts up close in front of the player, whatever the view does', () => {
+    const r = noticed()
+    const view = lookAt(r.out.position)
+    r.run(0.9, fixed(view))
+    expect(dot(r.out.position, view.forward)).toBeGreaterThan(0.3)
+    expect(length(r.out.position)).toBeLessThan(config.noticeNearMeters + 0.3)
+  })
+
+  it('circles the head all the way round and stays close', () => {
+    const r = noticed()
+    const view = lookAt(r.out.position)
+    const start = azimuthDeg(view.forward)
+    let travelled = 0
+    let previous = azimuthDeg(r.out.position)
+    let maxRadius = 0
+    for (let i = 0; i < 70; i++) {
+      const out = r.run(DT, fixed(view))
+      if (out.phase !== 'notice') break
+      const az = azimuthDeg(out.position)
+      travelled += angleDifference(previous, az)
+      previous = az
+      maxRadius = Math.max(maxRadius, length(out.position))
     }
+    expect(Math.abs(travelled)).toBeGreaterThan(300)
+    expect(maxRadius).toBeLessThan(1.5)
+    expect(Math.abs(angleDifference(start, previous))).toBeLessThan(40)
   })
 
-  it('hops with pauses in between instead of drifting, at a pace that can be followed', () => {
-    const { samples } = watchGame(config)
-    const speeds = samples.slice(1).map((s) => s.speed)
-    // Peak of a 30 degree smoothstep hop over 0.7 s is about 64 deg/s.
-    expect(Math.max(...speeds)).toBeLessThan(75)
-    const still = speeds.filter((s) => s < 3).length / speeds.length
-    expect(still).toBeGreaterThan(0.25)
-    expect(still).toBeLessThan(0.85)
+  it('does not depend on the player keeping her in focus', () => {
+    const r = noticed()
+    expect(r.run(3, away).phase).toBe('notice')
   })
 
-  it('switches side most of the time', () => {
-    const { samples } = watchGame({ ...config, escapeFeintChance: 0 })
-    // Direction of each hop: the sign of the azimuth change over runs of motion.
-    const directions: number[] = []
-    let sum = 0
-    for (const [i, s] of samples.entries()) {
-      if (i > 0 && s.speed >= 3) sum += angleDifference(samples[i - 1].az, s.az)
-      else if (sum !== 0) {
-        directions.push(Math.sign(sum))
-        sum = 0
-      }
-    }
-    let switched = 0
-    for (let i = 1; i < directions.length; i++) if (directions[i] !== directions[i - 1]) switched++
-    expect(directions.length).toBeGreaterThan(20)
-    expect(switched / (directions.length - 1)).toBeGreaterThan(0.5)
-  })
-
-  it('flees with a "hey" when she was kept in focus, and fades out', () => {
-    const r = setup()
-    r.run(5.2, track)
+  it('then flees without another "hey" and hides', () => {
+    const r = noticed()
     r.events.length = 0
-    r.run(5.2, track)
+    r.run(4, track)
     expect(r.out.phase).toBe('flee')
-    expect(r.events).toContain('hey')
+    expect(r.events).toContain('out')
+    expect(r.events).not.toContain('hey')
     r.run(0.4, fixed(north))
     expect(r.out.alpha).toBeLessThan(0.7)
     expect(r.out.position.z).toBeGreaterThan(1.5)
+    r.run(0.6, fixed(north))
+    expect(r.out.phase).toBe('hidden')
   })
 })
 
-describe('hopOffset', () => {
-  const plain = { feint: false, first: 6, last: 20 }
-  const fake = { feint: true, first: 6, last: -16 }
-
-  it('runs smoothly from the start to the target', () => {
-    expect(hopOffset(plain, 0)).toBe(0)
-    expect(hopOffset(plain, 1)).toBeCloseTo(20)
-    expect(hopOffset(plain, 0.5)).toBeCloseTo(10)
-    let previous = 0
-    for (let u = 0.05; u <= 1; u += 0.05) {
-      expect(hopOffset(plain, u)).toBeGreaterThanOrEqual(previous)
-      previous = hopOffset(plain, u)
-    }
+describe('noticeOffset', () => {
+  it('starts and ends in front and does the turns in between', () => {
+    expect(noticeOffset(0, 0.5, 0.7, 1).azimuth).toBeCloseTo(0)
+    expect(noticeOffset(1, 0.5, 0.7, 1).azimuth).toBeCloseTo(360)
+    expect(noticeOffset(0.5, 0.5, 0.7, 1).azimuth).toBeCloseTo(180)
   })
 
-  it('a feint starts towards one side, then turns and goes the other way', () => {
-    expect(hopOffset(fake, 0.4)).toBeCloseTo(6)
-    expect(hopOffset(fake, 0.2)).toBeGreaterThan(0)
-    expect(hopOffset(fake, 0.2)).toBeLessThan(6)
-    expect(hopOffset(fake, 0.7)).toBeLessThan(6)
-    expect(hopOffset(fake, 1)).toBeCloseTo(-16)
-    // It really crosses where she started.
-    expect(hopOffset(fake, 0.85)).toBeLessThan(0)
-  })
-
-  it('a feint can also end where she started', () => {
-    expect(hopOffset({ feint: true, first: 6, last: 0 }, 1)).toBeCloseTo(0)
+  it('moves from the near distance out to the circle radius', () => {
+    expect(noticeOffset(0, 0.5, 0.7, 1).radius).toBeCloseTo(0.5)
+    expect(noticeOffset(1, 0.5, 0.7, 1).radius).toBeCloseTo(0.7)
   })
 })
 
 describe('excitement', () => {
-  it('is calm while floating and worked up while playing, flying and befriending', () => {
+  it('is calm while floating and worked up while noticing, flying and befriending', () => {
     const r = setup()
     expect(r.run(4, away).excitement).toBeLessThan(0.25)
     r.skip()
-    expect(r.out.phase).toBe('escape')
+    expect(r.out.phase).toBe('notice')
     expect(r.run(1.5, track).excitement).toBeGreaterThan(0.7)
     r.skip(4)
     expect(r.out.phase).toBe('befriend')
@@ -309,7 +252,7 @@ describe('focus on the whole screen', () => {
   it('counts while she is anywhere on the screen, not only in the middle', () => {
     const r = setup()
     r.run(5.5, beside(25))
-    expect(r.out.phase).toBe('escape')
+    expect(r.out.phase).toBe('notice')
   })
 
   it('does not count when she is outside of the screen', () => {
@@ -375,18 +318,6 @@ describe('voices', () => {
     expect(r.events.filter((e) => e === 'hello')).toHaveLength(1)
   })
 
-  it('is sad when the catch-me game is lost, and only then', () => {
-    const r = setup()
-    r.run(3, track)
-    r.run(1.5, away) // loses the swirl focus: no game yet
-    expect(r.events).not.toContain('sad')
-    r.run(5.5, track)
-    expect(r.out.phase).toBe('escape')
-    r.run(2, away)
-    expect(r.out.phase).toBe('swirl')
-    expect(r.events.filter((e) => e === 'sad')).toHaveLength(1)
-  })
-
   it('calls "look" when she hides and again every few seconds until she is found', () => {
     const r = setup()
     toFirstHide(r)
@@ -408,12 +339,11 @@ describe('voices', () => {
     expect(r.events).not.toContain('hey')
   })
 
-  it('still calls "hey" when the catch-me game is won', () => {
+  it('calls "hey" once when she notices the player, and the alarm is not for that', () => {
     const r = setup()
     r.run(5.2, track)
-    r.events.length = 0
-    r.run(5.2, track)
-    expect(r.events).toContain('hey')
+    r.run(4.1, track)
+    expect(r.events.filter((e) => e === 'hey')).toHaveLength(1)
     expect(r.events).not.toContain('alarm')
   })
 })
@@ -425,8 +355,8 @@ describe('move events', () => {
     r.run(10, away)
     expect([count('move'), count('in'), count('out')]).toEqual([0, 0, 0])
     r.run(5.2, track)
-    expect(count('move')).toBe(1) // escape
-    r.run(5.2, track)
+    expect(count('move')).toBe(1) // she notices the player
+    r.run(4.1, track)
     expect(count('out')).toBe(1) // she flies away
     r.run(0.9, fixed(north))
     expect(count('in')).toBe(1) // she appears behind the player
@@ -564,7 +494,7 @@ describe('skip, reset and robustness', () => {
       seen.push([r.out.phase, r.out.finds])
     }
     expect(seen).toEqual([
-      ['escape', 0],
+      ['notice', 0],
       ['hidden', 0],
       ['hidden', 1],
       ['hidden', 2],
