@@ -3,6 +3,7 @@ import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useCompass } from '@/composables/useCompass'
 import { useSensorMode } from '@/composables/useSensorMode'
 import {
+  decoyTuning,
   onSensorArrived,
   SENSOR_FACING_RELEASE_DEG,
   SENSOR_FACING_TOLERANCE_DEG,
@@ -54,7 +55,9 @@ export function useSensorBeeper() {
   const { distance, accuracy, relativeBearing } = useCompass(
     () => active.value?.location ?? { lat: 0, lng: 0 }
   )
-  const radius = computed(() => foundRadius(accuracy.value, sensorTuning))
+  // A decoy ("Niete") only gets a very quiet, steady signal and can never be reached.
+  const tuning = computed(() => (active.value?.decoy ? decoyTuning : sensorTuning))
+  const radius = computed(() => foundRadius(accuracy.value, tuning.value))
 
   // The player came into the found radius (and stays "arrived" until clearly out of it again, so GPS jitter does not
   // toggle it). Reset when the sensor is switched off or another one is activated.
@@ -62,7 +65,7 @@ export function useSensorBeeper() {
   watch(
     [active, distance, radius],
     ([sensor, meters, found]) => {
-      if (!sensor?.location || meters === null) {
+      if (!sensor?.location || sensor.decoy || meters === null) {
         arrived.value = false
       } else if (!arrived.value && meters <= found) {
         arrived.value = true
@@ -117,8 +120,8 @@ export function useSensorBeeper() {
       const offset = relativeBearing.value === null ? 0 : Math.abs(relativeBearing.value)
       facing = offset <= (facing ? SENSOR_FACING_RELEASE_DEG : SENSOR_FACING_TOLERANCE_DEG)
       if (isBeepAudible(distance.value, facing, radius.value)) {
-        beep(beepVolume(distance.value, radius.value, sensorTuning))
-        wait = beepIntervalMs(distance.value, offset, radius.value, sensorTuning)
+        beep(beepVolume(distance.value, radius.value, tuning.value))
+        wait = beepIntervalMs(distance.value, offset, radius.value, tuning.value)
       } else {
         // Pointing elsewhere: silent, but look again soon so the signal starts as the player turns.
         wait = TURN_CHECK_MS

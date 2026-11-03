@@ -25,6 +25,11 @@ export interface SensorEvent {
    * silent: nothing to measure.
    */
   location?: LatLng
+  /**
+   * A "Niete" (red herring): its location is unreachable and it does not matter. The sensor gives only a very quiet,
+   * steady signal (`decoyTuning`), never gets excited and never counts as arrived, so the real targets stand out.
+   */
+  decoy?: boolean
 }
 
 /**
@@ -73,13 +78,19 @@ export function findSensor(id: string): SensorEvent | null {
   return sensors.find((sensor) => sensor.id === id) ?? null
 }
 
+/** The signal starts when the phone points at the target within this angle (degrees). */
+export const SENSOR_FACING_TOLERANCE_DEG = 30
+/** Once started, the signal only stops when the phone points past this angle (degrees): no stutter at the edge. */
+export const SENSOR_FACING_RELEASE_DEG = 45
+
 /** How the sensor beeps (see `lib/sensorBeep.ts`). Untested on a real phone: tune there. */
 export const sensorTuning: BeepTuning = {
   nearMeters: 10,
-  farMeters: 3000,
+  // The real targets are within the city: calm beyond ~800 m, the rhythm picks up only well inside it (linear curve).
+  farMeters: 800,
   fastIntervalMs: 300,
-  slowIntervalMs: 2500,
-  curve: 0.6,
+  slowIntervalMs: 3000,
+  curve: 1,
   centerIntervalFactor: 0.5,
   aimEdgeDeg: SENSOR_FACING_TOLERANCE_DEG,
   farVolume: 0.12,
@@ -89,13 +100,19 @@ export const sensorTuning: BeepTuning = {
   foundIntervalMs: 250
 }
 
+/** A decoy ("Niete", see `SensorEvent.decoy`): very quiet and slow whatever the distance and the aim. */
+export const decoyTuning: BeepTuning = {
+  ...sensorTuning,
+  fastIntervalMs: 4000,
+  slowIntervalMs: 4000,
+  centerIntervalFactor: 1,
+  farVolume: 0.04,
+  nearVolume: 0.04,
+  foundIntervalMs: 4000
+}
+
 /** The player came into the found radius of the active sensor. */
 export function onSensorArrived(sensor: SensorEvent) {
   // TODO(arrival): what happens at the target (a hint to scan the code, unlocking content ...).
   void sensor
 }
-/** The signal starts when the phone points at the target within this angle (degrees). */
-export const SENSOR_FACING_TOLERANCE_DEG = 30
-/** Once started, the signal only stops when the phone points past this angle (degrees): no stutter at the edge. */
-export const SENSOR_FACING_RELEASE_DEG = 45
-

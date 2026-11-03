@@ -11,6 +11,7 @@ import soundSensorDeactivate from '@/assets/audio/sensor-error.ogg'
 import markerIconArea from '@/assets/images/map/area.png'
 import BackButton from '@/components/BackButton.vue'
 import ClockWidget from '@/components/widgets/ClockWidget.vue'
+import DistanceWidget from '@/components/widgets/DistanceWidget.vue'
 import WeatherWidget from '@/components/widgets/WeatherWidget.vue'
 import { useGeolocation } from '@/composables/useGeolocation'
 import { useHeading } from '@/composables/useHeading'
@@ -20,6 +21,7 @@ import { areaLabelMaxZoom, areas, poiLevels, pois, regions } from '@/game/marker
 import type { Area, Poi, Region, Visibility } from '@/game/markers'
 import { playSound } from '@/lib/audio'
 import { metersPerPixel } from '@/lib/geo'
+import { nextBearing } from '@/lib/mapFollow'
 import { formatApproxDistance } from '@/lib/sensorBeep'
 import type { LatLng } from '@/lib/geo'
 import { zoomOpacity } from '@/lib/zoomVisibility'
@@ -202,8 +204,11 @@ function createUserMarker(): HTMLElement {
   return el
 }
 
+// The arrow points where the player looks; the map may be turned (heading-up), so it is rotated relative to the map.
 function applyHeading(value: number | null) {
-  if (userArrowEl) userArrowEl.style.transform = `rotate(${value ?? 0}deg)`
+  if (userArrowEl) {
+    userArrowEl.style.transform = `rotate(${(value ?? 0) - (map?.getBearing() ?? 0)}deg)`
+  }
 }
 
 // Third beat of the intro: the map is revealed by a circle growing from the user (or the map center).
@@ -263,6 +268,13 @@ onMounted(() => {
   regions.forEach(createRegion)
   updateZoomMarkers()
   map.on('zoom', updateZoomMarkers)
+  map.on('rotate', () => applyHeading(heading.value))
+  // A drag by the user (not our own `jumpTo`, which has no original event) pauses following.
+  map.on('dragstart', (event) => {
+    if (event.originalEvent) pannedAway = true
+  })
+  // The scanner activates a sensor and then opens the map: it is already active here.
+  if (activeSensor.value) startFollow()
 
   // A GPS fix may have arrived before the map existed.
   if (userPosition.value) updateUserMarker(userPosition.value)
@@ -271,6 +283,8 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
+  if (followFrame !== null) cancelAnimationFrame(followFrame)
+  followFrame = null
   window.clearTimeout(pulseTimer)
   revealTimers.forEach((timer) => window.clearTimeout(timer))
   revealTimers = []
@@ -301,8 +315,69 @@ const stopWatchingFirstFix = watch(userPosition, (position) => {
 
 watch(heading, applyHeading)
 
+// Heading-up: while a sensor is active the map turns so that the direction the player looks is up, and follows the
+// player. Dragging the map pauses the following (the turning goes on), the recenter button resumes it. A frame loop
+// that only runs while a sensor is active (battery); `jumpTo` stops any running ease, so it does the whole motion.
+const BEARING_SMOOTHING = 0.15
+const BEARING_DEADBAND_DEG = 1
+const CENTER_SMOOTHING = 0.12
+// A position closer than this to the center (degrees, about 1 cm) counts as there.
+const CENTER_EPSILON_DEG = 1e-7
+let followFrame: number | null = null
+let pannedAway = false
+
+function followStep() {
+  followFrame = requestAnimationFrame(followStep)
+  if (!map) return
+  const bearing = map.getBearing()
+  const nextTurn =
+    heading.value === null
+      ? bearing
+      : nextBearing(bearing, heading.value, BEARING_SMOOTHING, BEARING_DEADBAND_DEG)
+
+  let center: maplibregl.LngLat | undefined
+  if (!pannedAway && userPosition.value) {
+    const here = map.getCenter()
+    const dLng = userPosition.value.lng - here.lng
+    const dLat = userPosition.value.lat - here.lat
+    if (Math.abs(dLng) > CENTER_EPSILON_DEG || Math.abs(dLat) > CENTER_EPSILON_DEG) {
+      center = new maplibregl.LngLat(
+        here.lng + dLng * CENTER_SMOOTHING,
+        here.lat + dLat * CENTER_SMOOTHING
+      )
+    }
+  }
+  if (nextTurn !== bearing || center) map.jumpTo({ bearing: nextTurn, center })
+}
+
+function startFollow() {
+  if (!map || followFrame !== null) return
+  pannedAway = false
+  // The map turns by itself, a finger turning it would only fight that.
+  map.dragRotate.disable()
+  map.touchZoomRotate.disableRotation()
+  followFrame = requestAnimationFrame(followStep)
+}
+
+function stopFollow() {
+  if (followFrame === null) return
+  cancelAnimationFrame(followFrame)
+  followFrame = null
+  if (!map) return
+  map.dragRotate.enable()
+  map.touchZoomRotate.enableRotation()
+  if (map.getBearing() !== 0) map.easeTo({ bearing: 0, duration: 600 })
+}
+
+watch(activeSensor, (sensor) => (sensor ? startFollow() : stopFollow()))
+
 function centerMapOnUser() {
-  if (userPosition.value) map?.easeTo({ center: toLngLat(userPosition.value), zoom: 17 })
+  if (!userPosition.value) return
+  pannedAway = false
+  const center = toLngLat(userPosition.value)
+  // While following, the frame loop would cancel an ease right away.
+  if (followFrame !== null) map?.jumpTo({ center, zoom: 17 })
+  else map?.easeTo({ center, zoom: 17 })
 }
 </script>
 
@@ -328,9 +403,6 @@ function centerMapOnUser() {
       >
         <span class="App-map-sensor-text" aria-hidden="true">
           <span class="App-map-sensor-name">{{ activeSensor ? activeSensor.name : 'Aus' }}</span>
-          <span v-if="sensorDistanceText" class="App-map-sensor-distance">{{
-            sensorDistanceText
-          }}</span>
           <span class="App-map-sensor-label">Sensor</span>
         </span>
         <button
@@ -352,6 +424,11 @@ function centerMapOnUser() {
       <div class="App-map-widgets">
         <ClockWidget />
         <WeatherWidget />
+      </div>
+
+      <!-- The distance to the active sensor's target, top left, left-aligned like the clock on the right. -->
+      <div v-if="sensorDistanceText" class="App-map-distance">
+        <DistanceWidget :text="sensorDistanceText" />
       </div>
     </div>
   </div>
@@ -711,20 +788,27 @@ $settle-delay: 0.6s;
         line-height: 1.2;
       }
 
-      &-distance {
-        font-size: 0.95em;
-        line-height: 1.1;
-        opacity: 0.85;
-      }
-
       &-label {
         @include widget.label;
       }
     }
 
+    // Left-aligned, under the top-left corner of the frame (mirrors the widgets).
+    &-distance {
+      --widget-clock-size: 1.5em;
+      --widget-clock-weight: 400;
+      --widget-align: flex-start;
+
+      position: absolute;
+      z-index: 100;
+      top: calc(var(--frame-top) + 12px);
+      left: calc(var(--frame-corner-tl) * 0.5);
+    }
+
     // Right-aligned stack under the top-right corner of the frame.
     &-widgets {
       --widget-clock-size: 1.5em;
+      --widget-clock-weight: 400;
       --widget-align: flex-end;
 
       position: absolute;

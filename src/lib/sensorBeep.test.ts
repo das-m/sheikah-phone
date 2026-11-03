@@ -41,12 +41,20 @@ describe('beepIntervalMs', () => {
     }
   })
 
-  it('is shorter the better the aim, down to the center factor', () => {
+  it('is shorter the better the aim, down to the center factor close to the target', () => {
+    const edge = beepIntervalMs(10, 30, radius, tuning)
+    expect(beepIntervalMs(10, 0, radius, tuning)).toBeCloseTo(edge * 0.5)
+    expect(beepIntervalMs(10, 15, radius, tuning)).toBeCloseTo(edge * 0.75)
+    expect(beepIntervalMs(10, -15, radius, tuning)).toBeCloseTo(edge * 0.75)
+    expect(beepIntervalMs(10, 40, radius, tuning)).toBeCloseTo(edge)
+  })
+
+  it('lets the aim matter less the farther away', () => {
     const edge = beepIntervalMs(200, 30, radius, tuning)
-    expect(beepIntervalMs(200, 0, radius, tuning)).toBeCloseTo(edge * 0.5)
-    expect(beepIntervalMs(200, 15, radius, tuning)).toBeCloseTo(edge * 0.75)
-    expect(beepIntervalMs(200, -15, radius, tuning)).toBeCloseTo(edge * 0.75)
-    expect(beepIntervalMs(200, 40, radius, tuning)).toBeCloseTo(edge)
+    const center = beepIntervalMs(200, 0, radius, tuning)
+    expect(center).toBeLessThan(edge)
+    expect(center).toBeGreaterThan(edge * 0.5)
+    expect(beepIntervalMs(510, 0, radius, tuning)).toBeCloseTo(beepIntervalMs(510, 30, radius, tuning))
   })
 
   it('changes more up close than far away (curve below 1)', () => {

@@ -50,7 +50,7 @@ export function isFound(distance: number, radius: number): boolean {
 
 /**
  * Time from one beep to the next, in ms. `offsetDeg` is how far the phone points past the target (0 = straight at it);
- * it makes the beeps up to `1 / centerIntervalFactor` times faster the better the aim.
+ * it makes the beeps up to `1 / centerIntervalFactor` times faster the better the aim, fading out with the distance.
  */
 export function beepIntervalMs(
   distance: number,
@@ -61,8 +61,10 @@ export function beepIntervalMs(
   if (isFound(distance, radius)) return tuning.foundIntervalMs
   const t = closeness(distance, tuning) ** tuning.curve
   const interval = tuning.fastIntervalMs + (tuning.slowIntervalMs - tuning.fastIntervalMs) * t
+  // The aim only quickens the beeps the closer you are: far away, pointing straight at it stays calm.
   const off = Math.min(1, Math.abs(offsetDeg) / Math.max(1e-6, tuning.aimEdgeDeg))
-  return interval * (tuning.centerIntervalFactor + (1 - tuning.centerIntervalFactor) * off)
+  const bonus = (1 - tuning.centerIntervalFactor) * (1 - off) * (1 - closeness(distance, tuning))
+  return interval * (1 - bonus)
 }
 
 /** Volume of a beep, 0..1. */
