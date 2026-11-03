@@ -86,9 +86,9 @@ const corners = ['tl', 'tr', 'br', 'bl']
 
     .PhoneFrame-corner,
     .PhoneFrame-strip {
-      // `--frame-glow` is set on <html> by an app that wants its own glow (`useFrameGlow`).
+      // `--frame-glow` is set on <html> while an app with its own glow is open (`setFrameGlow`, from `App.vue`).
       background-color: var(--frame-glow, var(--color-primary));
-      transition: background-color 0.5s;
+      transition: background-color var(--color-fade);
     }
 
     .PhoneFrame-corner--tl {

@@ -45,5 +45,5 @@ export const fairyConfig: FairyConfig = {
   guideBobMeters: 0.15
 }
 
-/** Where the befriended fairy points to. Placeholder: Residenzschloss Ludwigsburg. */
-export const fairyGuideTarget: LatLng = { lat: 48.899614, lng: 9.195613 }
+/** Where the befriended fairy points to. Test coordinates. */
+export const fairyGuideTarget: LatLng = { lat: 48.7886009, lng: 9.1758919 }

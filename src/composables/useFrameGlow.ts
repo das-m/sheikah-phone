@@ -1,27 +1,11 @@
-import { onUnmounted } from 'vue'
-
-const claims: { color: string }[] = []
-
-function apply() {
-  const style = document.documentElement.style
-  const latest = claims[claims.length - 1]
-  if (latest) style.setProperty('--frame-glow', latest.color)
-  else style.removeProperty('--frame-glow')
-}
-
 /**
- * Colors the glow of the phone frame (`PhoneFrame`) for as long as the calling app is mounted, e.g. `'var(--color-purple)'`.
- * The frame sits outside the router view, so the color goes through a custom property on <html>; the frame fades to it.
- * The newest claim wins, and a leaving app (it stays mounted through its fade-out) gives up only its own claim, so it
- * cannot wipe the color of the app that came after it.
+ * Colors the glow of the phone frame (`PhoneFrame`) and of the loader's logo, e.g. `'var(--color-purple)'`; `null` goes
+ * back to the mode color. The frame sits outside the router view, so the color goes through a custom property on <html>;
+ * both fade to it (`--color-fade`). `App.vue` calls this, at the point of a transition where the color should change
+ * (the lens: in the middle of its loader), from the `glow` of the app (`game/apps.ts`).
  */
-export function useFrameGlow(color: string) {
-  const claim = { color }
-  claims.push(claim)
-  apply()
-
-  onUnmounted(() => {
-    claims.splice(claims.indexOf(claim), 1)
-    apply()
-  })
+export function setFrameGlow(color: string | null) {
+  const style = document.documentElement.style
+  if (color) style.setProperty('--frame-glow', color)
+  else style.removeProperty('--frame-glow')
 }

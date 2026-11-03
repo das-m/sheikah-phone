@@ -38,7 +38,7 @@ export const sensors: SensorEvent[] = [
     description: 'Hier steht später, was die Tafel über dieses Ereignis verrät.',
     commonLocations: 'Rund um das Residenzschloss.',
     status: 'available',
-    location: { lat: 48.899614, lng: 9.195613 }
+    location: { lat: 48.7802009, lng: 9.1792001 }
   },
   {
     id: '02',

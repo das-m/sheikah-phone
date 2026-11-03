@@ -8,10 +8,9 @@ import ScanModal from '@/components/ScanModal.vue'
 import ScanOverlay from '@/components/ScanOverlay.vue'
 import { useCamera } from '@/composables/useCamera'
 import { useCodeScanner } from '@/composables/useCodeScanner'
-import { useFrameGlow } from '@/composables/useFrameGlow'
 import { useScanAction } from '@/composables/useScanAction'
 import { useScreenAngle } from '@/composables/useScreenAngle'
-import { LENS_SHIFT, scanFilter } from '@/game/scanFilters'
+import { LENS_SCALE, LENS_SHIFT, scanFilter } from '@/game/scanFilters'
 import { findTarget, type ScanTarget } from '@/game/scanTargets'
 import { playSound } from '@/lib/audio'
 import { lensOffset } from '@/lib/lens'
@@ -31,9 +30,6 @@ const audioSensorError = new Audio(soundSensorError)
 const NOTE_MS = 2500
 /** After the modal is closed, a code confirmed within this time is the one that was just handled. */
 const QUIET_AFTER_MODAL_MS = 1500
-
-// Matches the purple tint of the image (`scanFilter`).
-useFrameGlow('var(--color-purple)')
 
 const videoEl = ref<HTMLVideoElement | null>(null)
 // The round lens box: the rim is drawn in it, and codes outside it do not count (ScanOverlay `region`).
@@ -112,7 +108,7 @@ onUnmounted(() => {
 
 <template>
   <Transition name="lens" appear>
-    <div class="App" :style="{ '--lens-shift': lensShift }">
+    <div class="App" :style="{ '--lens-shift': lensShift, '--lens-scale': LENS_SCALE }">
       <BackButton />
       <template v-if="!hasFailed">
         <!-- The camera keeps its full-screen box (the overlay's maths depend on it) and is cut to the lens round. -->
@@ -181,7 +177,11 @@ onUnmounted(() => {
   position: relative;
   // The lens: a circle as big as the free height (or the width, in a narrow window), centered between the frame art.
   // The camera is cut to the same circle, so both are derived from these three values.
-  --lens-d: min(100vw, calc(100vh - var(--frame-top) - var(--frame-bottom)));
+  // The lens is bigger than the free height (`LENS_SCALE`, `--lens-scale` from the script): it reaches under the stone strips
+  // of the frame, which cover its top and bottom. `--lens-base` is the plain free height, the measure of the image shift.
+  --lens-free: calc(100vh - var(--frame-top) - var(--frame-bottom));
+  --lens-base: min(100vw, var(--lens-free));
+  --lens-d: min(100vw, calc(var(--lens-free) * var(--lens-scale, 1)));
   --lens-top: calc(
     (100% - var(--frame-top) - var(--frame-bottom) - var(--lens-d)) / 2 + var(--frame-top)
   );
@@ -190,7 +190,7 @@ onUnmounted(() => {
   // The lens stays in the middle of the screen; the image moves under it instead (`--lens-shift`, set from the script, a
   // signed fraction of the diameter, see `lib/lens.ts`), so what is held in front of the phone's middle shows in the lens.
   // The overlay moves with the video, so its maths (video pixels to screen) stay as they are.
-  --cam-dx: calc(var(--lens-d) * var(--lens-shift, 0) * -1);
+  --cam-dx: calc(var(--lens-base) * var(--lens-shift, 0) * -1);
   background: radial-gradient(circle at var(--lens-cx) var(--lens-cy), #1c1040, #07040f 80%);
   // The lens does not wait for the loader to be gone (`--screen-delay`): it fades in as the loader's exit (0.65 s)
   // begins and is opaque before the loader lets go, so the blue swirl behind never shows.
@@ -225,7 +225,7 @@ onUnmounted(() => {
     top: var(--lens-cy);
     right: calc(var(--frame-corner-br) + 0.5rem);
     transform: translateY(-50%);
-    max-width: calc((100vw - var(--lens-d)) / 2 - 1.5rem);
+    max-width: max(8rem, calc((100vw - var(--lens-d)) / 2 - 1.5rem));
     padding: 0.4em 0.2em;
     border: 0;
     border-bottom: 2px solid var(--color-secondary);

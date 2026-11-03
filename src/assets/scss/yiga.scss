@@ -3,12 +3,11 @@
   covers images with blue baked in. Blue-only art is tinted with hue-rotate (blue #3CD3FC -> red);
   `*-red` files are hand-colored replacements where a tint is not enough (art that also holds
   other colors, or a background). Replace tinted spots with real red art when it exists.
-  The frame needs no override: its glow layer is white art colored by `--color-primary`.
+  The frame and the loader's logo need no override: their art is white, colored by `--color-primary`.
 */
 $yiga-tint: hue-rotate(168deg);
 
 :root[data-mode='yiga'] {
-  .SheikahLoader-logo,
   .BackButton,
   .InfoText-line-left,
   .InfoText-line-right,

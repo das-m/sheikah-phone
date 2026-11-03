@@ -45,10 +45,10 @@ describe('sensors', () => {
     }
   })
 
-  it('keeps sensor locations near Ludwigsburg', () => {
+  it('keeps sensor locations in the Ludwigsburg / Stuttgart area', () => {
     for (const { location } of sensors) {
       if (!location) continue
-      expect(location.lat).toBeGreaterThan(48.8)
+      expect(location.lat).toBeGreaterThan(48.7)
       expect(location.lat).toBeLessThan(49.0)
       expect(location.lng).toBeGreaterThan(9.0)
       expect(location.lng).toBeLessThan(9.4)

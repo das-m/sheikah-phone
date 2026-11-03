@@ -5,6 +5,7 @@ import 'maplibre-gl/dist/maplibre-gl.css'
 import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?url'
 import { onMounted, onUnmounted, ref, watch } from 'vue'
 
+import soundMapLoad from '@/assets/audio/map-load.wav'
 import soundSensorActivate from '@/assets/audio/sensor-activate.ogg'
 import soundSensorDeactivate from '@/assets/audio/sensor-error.ogg'
 import markerIconArea from '@/assets/images/map/area.png'
@@ -49,6 +50,7 @@ watch(beepCount, () => {
   window.clearTimeout(pulseTimer)
   pulseTimer = window.setTimeout(() => (isSensorPulsing.value = false), SENSOR_PULSE_MS)
 })
+const audioMapLoad = new Audio(soundMapLoad)
 const audioSensorActivate = new Audio(soundSensorActivate)
 const audioSensorDeactivate = new Audio(soundSensorDeactivate)
 
@@ -223,6 +225,7 @@ function scheduleReveal(m: maplibregl.Map) {
     if (timerDone && mapDone) reveal()
   }
   revealTimers.push(
+    window.setTimeout(() => playSound(audioMapLoad), screenDelay * 1000),
     window.setTimeout(() => {
       timerDone = true
       go()

@@ -1,5 +1,12 @@
 @use './frame';
 
+// Registered, so a transition can fade it (and the glow made from it) instead of jumping: the logo of the loader.
+@property --logo-color {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: #3cd3fc;
+}
+
 /*
   Scale unit of the decorative art (frame, swirl tile): 1 source pixel of the 1920x1080 frame art.
   Height-bound (the app is landscape only), clamped at both ends.
@@ -8,6 +15,8 @@
   // How long a new screen waits before it fades in, after a route change: the loader plays alone first and is
   // gone before the screen starts (App.vue: LOADER_MS = 1.2 s, plus its 0.65 s exit). Longer for the lens and the mode switch, shorter right
   // after the boot (see `Phone-main--lens`, `--booting` in App.vue).
+  // How long the color of the frame glow and of the loader's logo takes to change (both fade with it, in step).
+  --color-fade: 0.9s;
   --screen-delay: 1.85s;
   --u: clamp(0.35px, 100vmin / 860, 0.7px);
   // Base size of all text (the body); the widgets and screens scale from it in `em`.

@@ -8,13 +8,21 @@ export interface AppEntry {
   route: string
   mode: AppMode
   loader?: Exclude<LoaderVariant, ''>
+  /** Color of the phone frame's glow and the logo while the app is open (a CSS color); default: the mode color. */
+  glow?: string
 }
 
 /** Apps on the home screen. Each app belongs to exactly one mode. */
 export const apps: AppEntry[] = [
   { id: 'map', route: '/map', mode: 'sheikah' },
   { id: 'camera', route: '/camera', mode: 'sheikah' },
-  { id: 'scanner', route: '/scanner', mode: 'sheikah', loader: 'lens' },
+  {
+    id: 'scanner',
+    route: '/scanner',
+    mode: 'sheikah',
+    loader: 'lens',
+    glow: 'var(--color-purple)'
+  },
   { id: 'media', route: '/media', mode: 'sheikah' },
   // Placeholder until the real Yiga apps exist.
   { id: 'yiga', route: '/yiga', mode: 'yiga' }
@@ -23,6 +31,11 @@ export const apps: AppEntry[] = [
 /** The loader look of an app's route; routes outside the registry get the default. */
 export function loaderVariantFor(path: string): LoaderVariant {
   return apps.find((a) => a.route === path)?.loader ?? ''
+}
+
+/** The frame glow color of an app's route, or null for the mode color. */
+export function frameGlowFor(path: string): string | null {
+  return apps.find((a) => a.route === path)?.glow ?? null
 }
 
 /** Routes outside the registry (the home screen) are available in every mode. */

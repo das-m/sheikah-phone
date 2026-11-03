@@ -1,15 +1,16 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { onUnmounted, ref, watch } from 'vue'
 import { RouterView, useRoute } from 'vue-router'
 import BootScreen from './components/BootScreen.vue'
 import InstallGate from './components/InstallGate.vue'
 import PhoneFrame from './components/PhoneFrame.vue'
 import SheikahLoader from './components/SheikahLoader.vue'
+import { setFrameGlow } from './composables/useFrameGlow'
 import { useOrientationLock } from './composables/useOrientationLock'
 import { useYigaMode } from './composables/useYigaMode'
 import { useYigaLoop } from './composables/useYigaLoop'
 import { useYigaTrigger } from './composables/useYigaTrigger'
-import { isRouteAvailable, loaderVariantFor, type LoaderVariant } from './game/apps'
+import { frameGlowFor, isRouteAvailable, loaderVariantFor, type LoaderVariant } from './game/apps'
 import { isDirectNavigation } from './lib/navigation'
 import { playClose, playOpen } from './lib/uiSounds'
 
@@ -38,6 +39,10 @@ const loaderVariant = ref<LoaderVariant>('')
 const isDirect = ref(false)
 // The loader is the one of the app that is left (the lens back to home): its colors go back to the home screen's.
 const isLeavingVariant = ref(false)
+// The colors of the frame and the logo change this long after the loader starts: in the middle of the long transition,
+// while the pattern flickers (SheikahLoader). They fade over `--color-fade` (variables.scss), together.
+const GLOW_AT_MS = 900
+let glowTimer: ReturnType<typeof setTimeout> | undefined
 const route = useRoute()
 
 watch(
@@ -45,20 +50,28 @@ watch(
   (_, oldPath) => {
     if (!isBooted.value) return
 
+    const glow = frameGlowFor(route.path)
+    clearTimeout(glowTimer)
+
     // A mode switch redirects away from the other mode's app. The switch already plays its sound and the loader.
-    if (!isRouteAvailable(oldPath, mode.value)) return
+    if (!isRouteAvailable(oldPath, mode.value)) {
+      setFrameGlow(glow)
+      return
+    }
 
     hack.value = ''
     isDirect.value = isDirectNavigation()
     if (isDirect.value) {
       clearTimeout(loaderTimer)
       showLoader.value = false
+      setFrameGlow(glow)
       return
     }
 
     // Leaving an app plays its loader too, so the lens closes with the same color change, backwards.
     loaderVariant.value = loaderVariantFor(route.path) || loaderVariantFor(oldPath)
     isLeavingVariant.value = route.name === 'home'
+    glowTimer = setTimeout(() => setFrameGlow(glow), GLOW_AT_MS)
     show(loaderVariant.value === 'lens' ? LOADER_LENS_MS : LOADER_MS)
     if (route.name == 'home') playClose(mode.value, loaderVariant.value)
     else playOpen(mode.value, loaderVariant.value)
@@ -66,6 +79,16 @@ watch(
 )
 
 let loaderTimer: ReturnType<typeof setTimeout> | undefined
+
+// A page opened straight on an app with its own glow (reload, deep link): no transition, so the color is there at once.
+watch(isBooted, (booted) => {
+  if (booted) setFrameGlow(frameGlowFor(route.path))
+})
+
+onUnmounted(() => {
+  clearTimeout(loaderTimer)
+  clearTimeout(glowTimer)
+})
 
 function show(ms = LOADER_MS) {
   showLoader.value = true

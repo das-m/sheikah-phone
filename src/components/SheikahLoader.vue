@@ -6,7 +6,7 @@ import type { LoaderVariant } from '@/game/apps'
 
 // `hack`: the switch between the two modes, a "hack" of the device (see the hack part of the styles).
 // It takes the direction, since the colors and the logo turn from the old mode to the new one.
-// `variant`: the look of an app's own loader. 'lens' is the Scanner app's: the same logo and timing, in purple.
+// `variant`: the look of an app's own loader. 'lens' is the Scanner app's: the same logo and timing, in purple (the color change happens mid-transition).
 // `flash`: the pattern behind the eye flickers up and breathes. Only for the long transitions (the boot, the lens
 // and the mode switch, which set it themselves); the ordinary one stays short.
 const props = defineProps<{
@@ -50,10 +50,16 @@ const isFlashing = computed(() => props.flash || !!props.hack || props.variant =
 </template>
 
 <style lang="scss" scoped>
-// The art has blue baked in (Yiga mode tints it with hue-rotate on `.SheikahLoader-logo`), so the glow
-// uses that same blue and not the mode color, which would be tinted twice.
-$glow-color: rgba(60, 211, 252, 0.6);
 $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+
+// The art is white; every layer is a mask colored by `--logo-color`, like the glow of the phone frame (`PhoneFrame`):
+// the same variable (`--frame-glow`, else the mode color) and the same fade (`--color-fade`), so the logo and the frame
+// change color together. `--logo-color` is a registered property (variables.scss), so it, and the glow made from it,
+// fades instead of jumping.
+@mixin mask($image) {
+  -webkit-mask-image: $image;
+  mask-image: $image;
+}
 
 .SheikahLoader {
   position: absolute;
@@ -68,8 +74,12 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
 
   &-logo {
     // Bound by the short side, so the logo fits in landscape too (it used to be width-bound and got cut off).
-    --logo-size: min(80vmin, 500px);
-    --logo-shadow: drop-shadow(0 0 calc(var(--logo-size) * 0.035) #{$glow-color});
+    --logo-size: min(64vmin, 500px);
+    --logo-color: var(--frame-glow, var(--color-primary));
+    --logo-shadow: drop-shadow(
+      0 0 calc(var(--logo-size) * 0.035) color-mix(in srgb, var(--logo-color) 60%, transparent)
+    );
+    transition: --logo-color var(--color-fade);
     // Where the pattern sits in the logo box, measured from the final composite: it is 92.4% of the box tall
     // (the art keeps its ratio), centered horizontally, and its top is 58.6 of 1000 units below the box top
     // (= 77.3% of the free height).
@@ -85,8 +95,13 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
     &-layer {
       position: absolute;
       inset: 0;
-      background: transparent center no-repeat;
-      background-size: contain;
+      background-color: var(--logo-color);
+      -webkit-mask-position: center;
+      mask-position: center;
+      -webkit-mask-repeat: no-repeat;
+      mask-repeat: no-repeat;
+      -webkit-mask-size: contain;
+      mask-size: contain;
     }
 
     &-left,
@@ -96,15 +111,15 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
     }
 
     &-left {
-      background-image: url(@/assets/images/logo/sheikah-decor-left.svg);
+      @include mask(url(@/assets/images/logo/sheikah-decor-left.svg));
     }
 
     &-main {
-      background-image: url(@/assets/images/logo/sheikah-main.svg);
+      @include mask(url(@/assets/images/logo/sheikah-main.svg));
     }
 
     &-right {
-      background-image: url(@/assets/images/logo/sheikah-decor-right.svg);
+      @include mask(url(@/assets/images/logo/sheikah-decor-right.svg));
     }
 
     // The faint glow of the pattern behind the eye, once the logo is in place. It stays hidden until the eye
@@ -112,9 +127,11 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
     // breathes very softly. Opacity only, never scaled or moved, so it cannot look out of step with the logo.
     // It is set here and not on the enter state, because that state ends at 0.75 s and would cut it short.
     &-pattern {
-      background-image: url(@/assets/images/logo/sheikah-glow-pattern.svg);
-      background-size: auto var(--pattern-height);
-      background-position: 50% var(--pattern-y);
+      @include mask(url(@/assets/images/logo/sheikah-glow-pattern.svg));
+      -webkit-mask-size: auto var(--pattern-height);
+      mask-size: auto var(--pattern-height);
+      -webkit-mask-position: 50% var(--pattern-y);
+      mask-position: 50% var(--pattern-y);
       filter: brightness(var(--pattern-dim)) var(--logo-shadow);
       opacity: 0.3;
       // The ordinary transition is short (it has to stay in step with its sound): the pattern just fades in.
@@ -125,8 +142,9 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
     // image is used once. Its line is at 40.4% of the image radius-wise, the logo's circle at 44.6% of the
     // box: 110% makes them coincide.
     &-ring {
-      background-image: url(@/assets/images/logo/sheikah-decor-glow.png);
-      background-size: 110%;
+      @include mask(url(@/assets/images/logo/sheikah-decor-glow.png));
+      -webkit-mask-size: 110%;
+      mask-size: 110%;
       opacity: 0;
     }
   }
@@ -331,13 +349,11 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 // The lens (Scanner app): like the hack, the colors change in the middle of the transition, together with the pattern's
-// flicker (0.9 s): the logo is tinted to purple (blue is ~192deg, the lens purple ~263deg; by eye, tune on a phone) and
-// a purple backdrop fades in over the blue one. `reverse` (leaving the lens) goes from purple back to blue. The end state
-// is the look of the app on the side of the transition, so nothing jumps when the loader goes. The ring pings a second
-// time on entry, as if the lens focused.
+// flicker (0.9 s). The logo and the phone frame take their color from the same variable (see the top), which `App.vue`
+// switches at that moment, so they fade together; here only the backdrop is tinted: a purple one fades in over the blue
+// one. `reverse` (leaving the lens) goes from purple back to blue. The end state is the look of the app on the side of
+// the transition, so nothing jumps when the loader goes. The ring pings a second time on entry, as if the lens focused.
 .SheikahLoader--lens {
-  --lens-hue: 70deg;
-
   &::before {
     content: '';
     position: absolute;
@@ -347,18 +363,10 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
     animation: hack-tint-in 0.9s 0.9s ease-in-out both;
   }
 
-  .SheikahLoader-logo {
-    animation: lens-hue-in 0.9s 0.9s ease-in-out both;
-  }
-
   &.SheikahLoader--reverse {
     &::before {
       opacity: 1;
       animation-name: hack-tint-out;
-    }
-
-    .SheikahLoader-logo {
-      animation-name: lens-hue-out;
     }
   }
 
@@ -370,30 +378,12 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
   }
 }
 
-@keyframes lens-hue-in {
-  from {
-    filter: hue-rotate(0deg);
-  }
-  to {
-    filter: hue-rotate(var(--lens-hue));
-  }
-}
-
-@keyframes lens-hue-out {
-  from {
-    filter: hue-rotate(var(--lens-hue));
-  }
-  to {
-    filter: hue-rotate(0deg);
-  }
-}
-
 // The "hack" (switch between the modes): the device is being taken over. After the logo has arrived in the old
 // colors, scanlines come up and the logo glitches in short bursts, the whole logo (eye, decor, pattern) turns
-// over (like an inverted cross) while the colors fade across, and the backdrop is tinted red (or back).
+// over (like an inverted cross) while the colors fade across (the variable of the logo follows the mode color), and the backdrop is tinted red (or back).
 // Timeline, from the start:
 //   0 - 0.75 s  the normal arrival       0.9 s  scanlines in, glitches begin (to 3.6 s)
-//   1 - 2.4 s   logo turns, colors fade  1.6 s  the UI colors switch (useYigaMode, MODE_APPLY_DELAY_MS)
+//   1 - 2.4 s   logo turns               1.6 s  the UI colors switch and fade, logo and frame too (useYigaMode)
 // The end state equals the static look of the mode (yiga.scss), so nothing jumps when the loader goes.
 .SheikahLoader--hack {
   &::before {
@@ -416,7 +406,6 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
     .SheikahLoader-logo {
       animation:
         hack-glitch 2.7s 0.9s steps(1, end) both,
-        hack-hue-to-yiga 1.4s 1s ease-in-out both,
         hack-turn-to-yiga 1.4s 1s ease-in-out both;
     }
   }
@@ -430,7 +419,6 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
     .SheikahLoader-logo {
       animation:
         hack-glitch 2.7s 0.9s steps(1, end) both,
-        hack-hue-to-sheikah 1.4s 1s ease-in-out both,
         hack-turn-to-sheikah 1.4s 1s ease-in-out both;
     }
   }
@@ -455,25 +443,6 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
   }
   to {
     opacity: 0;
-  }
-}
-
-// Blue to red goes through purple and pink on the way.
-@keyframes hack-hue-to-yiga {
-  from {
-    filter: hue-rotate(0deg);
-  }
-  to {
-    filter: hue-rotate(168deg);
-  }
-}
-
-@keyframes hack-hue-to-sheikah {
-  from {
-    filter: hue-rotate(168deg);
-  }
-  to {
-    filter: hue-rotate(0deg);
   }
 }
 

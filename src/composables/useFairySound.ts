@@ -18,6 +18,8 @@ import soundFairyMove2 from '@/assets/audio/fairy-sound-02.ogg'
 import soundFairyMove3 from '@/assets/audio/fairy-sound-03.ogg'
 
 const MASTER_GAIN = 0.7
+/** The floating loop is a constant background, so it sits well below the one-shot voices. */
+const LOOP_GAIN = 0.5
 /** The rate only glides again once it moved this far, so the audio thread is not fed a new event every frame. */
 const RATE_STEP = 0.05
 const RATE_GLIDE_S = 0.15
@@ -122,7 +124,7 @@ export function useFairySound() {
       rolloffFactor: 1.2
     })
     panner.connect(new GainNode(context, { gain: MASTER_GAIN })).connect(context.destination)
-    loopGain = new GainNode(context, { gain: loudness })
+    loopGain = new GainNode(context, { gain: loudness * LOOP_GAIN })
     loopGain.connect(panner)
 
     // The tap into the app usually counts as the gesture already; if not, the first touch does.
@@ -177,7 +179,8 @@ export function useFairySound() {
   function setLoudness(value: number) {
     if (Math.abs(value - loudness) < LOUDNESS_STEP) return
     loudness = value
-    if (ctx && loopGain) loopGain.gain.setTargetAtTime(value, ctx.currentTime, LOUDNESS_GLIDE_S)
+    if (ctx && loopGain)
+      loopGain.gain.setTargetAtTime(value * LOOP_GAIN, ctx.currentTime, LOUDNESS_GLIDE_S)
   }
 
   /** One of her voices, from where she is: call it after `update`, so that it uses her current position. */
