@@ -1,9 +1,14 @@
-import { onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 
 import { useCompass } from '@/composables/useCompass'
 import { useSensorMode } from '@/composables/useSensorMode'
-import { SENSOR_FACING_TOLERANCE_DEG, sensorTuning } from '@/game/sensors'
-import { beepIntervalMs, beepVolume, isBeepAudible } from '@/lib/sensorBeep'
+import {
+  onSensorArrived,
+  SENSOR_FACING_RELEASE_DEG,
+  SENSOR_FACING_TOLERANCE_DEG,
+  sensorTuning
+} from '@/game/sensors'
+import { beepIntervalMs, beepVolume, foundRadius, isBeepAudible } from '@/lib/sensorBeep'
 
 import soundSignal from '@/assets/audio/sensor-signal.ogg'
 
@@ -11,6 +16,8 @@ import soundSignal from '@/assets/audio/sensor-signal.ogg'
 const IDLE_CHECK_MS = 500
 /** How often to look again while the phone points away from the target. */
 const TURN_CHECK_MS = 250
+/** The player has to leave the found radius by this much (metres) before the target counts as not reached again. */
+const ARRIVED_RELEASE_METERS = 5
 /** The signal is longer than the fastest interval: at most this many beeps ring at once. */
 const MAX_VOICES = 2
 const MASTER_GAIN = 0.9
@@ -33,8 +40,9 @@ function loadBuffer(context: AudioContext): Promise<AudioBuffer> {
 
 /**
  * The sonar of the active sensor (`useSensorMode`): a repeating beep that gets faster and louder the closer the player
- * is to its location, and only while the phone points at it (a little faster then; `lib/sensorBeep.ts`, numbers in
- * `game/sensors.ts`). Silent without an active sensor, without a location on it and without a GPS fix, and
+ * is to its location, and only while the phone points at it (the better the aim, the faster; `lib/sensorBeep.ts`,
+ * numbers in `game/sensors.ts`). `arrived` is true while the player is inside the found radius (which follows the GPS
+ * accuracy); coming in vibrates and calls `onSensorArrived`. Silent without an active sensor, without a location on it and without a GPS fix, and
  * while the page is hidden. Call in `setup` (it uses the GPS and compass composables). The tap that opened the map
  * counts as the gesture audio needs; if not, the first touch does. Returns `beepCount`, which goes up with every beep that
  * actually sounds, so the screen can flash its sensor icon in step.
@@ -43,10 +51,32 @@ export function useSensorBeeper() {
   const beepCount = ref(0)
   const { active } = useSensorMode()
   // The target of an event without a location is never read (see `step`), the placeholder only satisfies the type.
-  const { distance, isFacingTarget, heading } = useCompass(
-    () => active.value?.location ?? { lat: 0, lng: 0 },
-    SENSOR_FACING_TOLERANCE_DEG
+  const { distance, accuracy, relativeBearing } = useCompass(
+    () => active.value?.location ?? { lat: 0, lng: 0 }
   )
+  const radius = computed(() => foundRadius(accuracy.value, sensorTuning))
+
+  // The player came into the found radius (and stays "arrived" until clearly out of it again, so GPS jitter does not
+  // toggle it). Reset when the sensor is switched off or another one is activated.
+  const arrived = ref(false)
+  watch(
+    [active, distance, radius],
+    ([sensor, meters, found]) => {
+      if (!sensor?.location || meters === null) {
+        arrived.value = false
+      } else if (!arrived.value && meters <= found) {
+        arrived.value = true
+        navigator.vibrate?.([200, 100, 200])
+        onSensorArrived(sensor)
+      } else if (arrived.value && meters > found + ARRIVED_RELEASE_METERS) {
+        arrived.value = false
+      }
+    },
+    { immediate: true }
+  )
+
+  // With hysteresis: starts within the tolerance, stops only past the release angle.
+  let facing = false
 
   let ctx: AudioContext | null = null
   let master: GainNode | null = null
@@ -83,11 +113,12 @@ export function useSensorBeeper() {
     let wait = IDLE_CHECK_MS
     const sensor = active.value
     if (sensor?.location && distance.value !== null) {
-      // No compass (desktop, iOS): count as facing, or it would stay silent forever.
-      const facing = heading.value === null || isFacingTarget.value
-      if (isBeepAudible(distance.value, facing, sensorTuning)) {
-        beep(beepVolume(distance.value, sensorTuning))
-        wait = beepIntervalMs(distance.value, facing, sensorTuning)
+      // No compass (desktop, iOS): count as pointing straight at it, or it would stay silent forever.
+      const offset = relativeBearing.value === null ? 0 : Math.abs(relativeBearing.value)
+      facing = offset <= (facing ? SENSOR_FACING_RELEASE_DEG : SENSOR_FACING_TOLERANCE_DEG)
+      if (isBeepAudible(distance.value, facing, radius.value)) {
+        beep(beepVolume(distance.value, radius.value, sensorTuning))
+        wait = beepIntervalMs(distance.value, offset, radius.value, sensorTuning)
       } else {
         // Pointing elsewhere: silent, but look again soon so the signal starts as the player turns.
         wait = TURN_CHECK_MS
@@ -130,5 +161,5 @@ export function useSensorBeeper() {
     ctx = null
   })
 
-  return { beepCount, distance }
+  return { beepCount, distance, arrived }
 }

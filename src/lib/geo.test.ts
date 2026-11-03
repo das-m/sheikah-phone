@@ -6,7 +6,9 @@ import {
   distanceMeters,
   isFacing,
   metersPerPixel,
-  normalizeDegrees
+  normalizeDegrees,
+  screenHeading,
+  smoothAngle
 } from './geo'
 
 const schloss = { lat: 48.899614, lng: 9.195613 }
@@ -73,6 +75,38 @@ describe('compassHeading', () => {
     expect(compassHeading(270, 90, 0)).toBeCloseTo(90, 5)
     expect(compassHeading(180, 90, 0)).toBeCloseTo(180, 5)
     expect(compassHeading(90, 90, 0)).toBeCloseTo(270, 5)
+  })
+})
+
+describe('screenHeading', () => {
+  it('matches compassHeading in portrait, flat and upright', () => {
+    for (const alpha of [0, 90, 200, 300]) {
+      expect(screenHeading(alpha, 0, 0, 0)).toBeCloseTo(compassHeading(alpha, 0, 0), 5)
+      expect(screenHeading(alpha, 90, 0, 0)).toBeCloseTo(compassHeading(alpha, 90, 0), 5)
+    }
+  })
+  it('flat in landscape: the screen top points 90 / 270 degrees from the natural top edge', () => {
+    expect(screenHeading(0, 0, 0, 90)).toBeCloseTo(90, 5)
+    expect(screenHeading(0, 0, 0, 270)).toBeCloseTo(270, 5)
+    expect(screenHeading(270, 0, 0, 90)).toBeCloseTo(180, 5)
+  })
+  it('upright in landscape: the direction the back camera points to', () => {
+    // gamma -90 turns the back to the east, gamma 90 to the west, with the natural top edge to the north.
+    expect(screenHeading(0, 0, -90, 90)).toBeCloseTo(90, 5)
+    expect(screenHeading(0, 0, 90, 270)).toBeCloseTo(270, 5)
+  })
+})
+
+describe('smoothAngle', () => {
+  it('starts at the first reading', () => {
+    expect(smoothAngle(null, 123, 0.2)).toBeCloseTo(123, 5)
+  })
+  it('moves a fraction of the way, across 0/360', () => {
+    expect(smoothAngle(350, 10, 0.5)).toBeCloseTo(0, 5)
+    expect(smoothAngle(10, 350, 0.25)).toBeCloseTo(5, 5)
+  })
+  it('stays within [0, 360)', () => {
+    expect(smoothAngle(5, 355, 1)).toBeCloseTo(355, 5)
   })
 })
 

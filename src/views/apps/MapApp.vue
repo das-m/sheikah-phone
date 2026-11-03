@@ -41,12 +41,11 @@ const { heading } = useHeading()
 
 // Sensor mode: the scanner selects a sensor, it beeps while the map is open, the HUD switches it off and on.
 const { selected: selectedSensor, active: activeSensor, toggle: toggleSensor } = useSensorMode()
-const { beepCount, distance: sensorDistance } = useSensorBeeper()
-const sensorDistanceText = computed(() =>
-  activeSensor.value?.location && sensorDistance.value !== null
-    ? formatApproxDistance(sensorDistance.value)
-    : null
-)
+const { beepCount, distance: sensorDistance, arrived: sensorArrived } = useSensorBeeper()
+const sensorDistanceText = computed(() => {
+  if (!activeSensor.value?.location || sensorDistance.value === null) return null
+  return sensorArrived.value ? 'Ziel erreicht' : formatApproxDistance(sensorDistance.value)
+})
 // The sensor icon lights up with every beep.
 const SENSOR_PULSE_MS = 150
 const isSensorPulsing = ref(false)

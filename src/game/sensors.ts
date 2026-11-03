@@ -80,12 +80,22 @@ export const sensorTuning: BeepTuning = {
   fastIntervalMs: 300,
   slowIntervalMs: 2500,
   curve: 0.6,
-  facingIntervalFactor: 0.7,
+  centerIntervalFactor: 0.5,
+  aimEdgeDeg: SENSOR_FACING_TOLERANCE_DEG,
   farVolume: 0.12,
   nearVolume: 1,
-  foundMeters: 10,
+  foundMinMeters: 10,
+  foundMaxMeters: 25,
   foundIntervalMs: 250
 }
 
-/** The phone counts as pointing at the target within this angle (degrees). */
+/** The player came into the found radius of the active sensor. */
+export function onSensorArrived(sensor: SensorEvent) {
+  // TODO(arrival): what happens at the target (a hint to scan the code, unlocking content ...).
+  void sensor
+}
+/** The signal starts when the phone points at the target within this angle (degrees). */
 export const SENSOR_FACING_TOLERANCE_DEG = 30
+/** Once started, the signal only stops when the phone points past this angle (degrees): no stutter at the edge. */
+export const SENSOR_FACING_RELEASE_DEG = 45
+
