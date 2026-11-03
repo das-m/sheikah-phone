@@ -39,7 +39,16 @@ const { heading } = useHeading()
 
 // Sensor mode: the scanner selects a sensor, it beeps while the map is open, the HUD switches it off and on.
 const { selected: selectedSensor, active: activeSensor, toggle: toggleSensor } = useSensorMode()
-useSensorBeeper()
+const { beepCount } = useSensorBeeper()
+// The sensor icon lights up with every beep.
+const SENSOR_PULSE_MS = 150
+const isSensorPulsing = ref(false)
+let pulseTimer: number | undefined
+watch(beepCount, () => {
+  isSensorPulsing.value = true
+  window.clearTimeout(pulseTimer)
+  pulseTimer = window.setTimeout(() => (isSensorPulsing.value = false), SENSOR_PULSE_MS)
+})
 const audioSensorActivate = new Audio(soundSensorActivate)
 const audioSensorDeactivate = new Audio(soundSensorDeactivate)
 
@@ -254,6 +263,7 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
+  window.clearTimeout(pulseTimer)
   revealTimers.forEach((timer) => window.clearTimeout(timer))
   revealTimers = []
   zoomMarkers.length = 0
@@ -295,7 +305,7 @@ function centerMapOnUser() {
     <div ref="container" class="App-map"></div>
 
     <div class="App-ui">
-      <BackButton />
+      <BackButton home />
 
       <div class="App-map-button App-map-button--recenter" @click="centerMapOnUser"></div>
 
@@ -315,7 +325,10 @@ function centerMapOnUser() {
         <button
           type="button"
           class="App-map-button App-map-button--sensor"
-          :class="{ 'App-map-button--sensor-on': activeSensor }"
+          :class="{
+            'App-map-button--sensor-on': activeSensor,
+            'App-map-button--sensor-pulse': isSensorPulsing
+          }"
           :aria-label="
             activeSensor
               ? `Sensor ${activeSensor.name} ausschalten`
@@ -639,11 +652,17 @@ $settle-delay: 0.6s;
           // both icons have the same size (41 x 44.6), so one background-size
           background-image: url(@/assets/images/map/sensor-off.svg);
           background-size: 50%;
+          transition: filter 0.12s ease-out;
         }
       }
 
       &--sensor-on:before {
         background-image: url(@/assets/images/map/sensor-on.svg);
+      }
+
+      // Lit while a beep sounds.
+      &--sensor-pulse:before {
+        filter: brightness(1.8) drop-shadow(0 0 6px var(--color-primary));
       }
     }
 

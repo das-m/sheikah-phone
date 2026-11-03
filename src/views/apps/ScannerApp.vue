@@ -18,11 +18,13 @@ import { lensOffset } from '@/lib/lens'
 
 import soundSystemError from '@/assets/audio/error.ogg'
 import soundDetect from '@/assets/audio/lens-detect.ogg'
-import soundSensorActivate from '@/assets/audio/sensor-activate.ogg'
+import soundConfirm from '@/assets/audio/confirm.wav'
+import soundModalOpen from '@/assets/audio/sensor-touch.ogg'
 import soundSensorError from '@/assets/audio/sensor-error.ogg'
 const audioSystemError = new Audio(soundSystemError)
 const audioDetect = new Audio(soundDetect)
-const audioSensorActivate = new Audio(soundSensorActivate)
+const audioConfirm = new Audio(soundConfirm)
+const audioModalOpen = new Audio(soundModalOpen)
 const audioSensorError = new Audio(soundSensorError)
 
 /** How long the "unknown code" note stays after a manual entry. */
@@ -53,12 +55,13 @@ const scan = useCodeScanner(videoEl, isScanning)
 let quietUntil = 0
 watch(modal, (content, before) => {
   if (before && !content) quietUntil = performance.now() + QUIET_AFTER_MODAL_MS
+  if (!content || before) return
   // An event that cannot be selected (extinct, out of season): the modal only says why.
-  if (content && !before && content.statusText) playSound(audioSensorError)
+  playSound(content.statusText ? audioSensorError : audioModalOpen)
 })
 
 function onSelect() {
-  playSound(audioSensorActivate)
+  playSound(audioConfirm)
   select()
 }
 
@@ -70,7 +73,7 @@ function onConfirm(target: ScanTarget) {
   if (performance.now() >= quietUntil) playSound(audioDetect)
 }
 
-// The physical camera is not in the middle of the phone: the lens moves away from its end (`lib/lens.ts`).
+// The physical camera is not in the middle of the phone: the image moves toward its end (`lib/lens.ts`).
 const screenAngle = useScreenAngle()
 const lensShift = computed(() => lensOffset(screenAngle.value, LENS_SHIFT))
 
@@ -183,8 +186,11 @@ onUnmounted(() => {
     (100% - var(--frame-top) - var(--frame-bottom) - var(--lens-d)) / 2 + var(--frame-top)
   );
   --lens-cy: calc(var(--lens-top) + var(--lens-d) / 2);
-  // Moved sideways by `--lens-shift` (set from the script, a signed fraction of the diameter), see `lib/lens.ts`.
-  --lens-cx: calc(50% + var(--lens-d) * var(--lens-shift, 0));
+  --lens-cx: 50%;
+  // The lens stays in the middle of the screen; the image moves under it instead (`--lens-shift`, set from the script, a
+  // signed fraction of the diameter, see `lib/lens.ts`), so what is held in front of the phone's middle shows in the lens.
+  // The overlay moves with the video, so its maths (video pixels to screen) stay as they are.
+  --cam-dx: calc(var(--lens-d) * var(--lens-shift, 0) * -1);
   background: radial-gradient(circle at var(--lens-cx) var(--lens-cy), #1c1040, #07040f 80%);
   // The lens does not wait for the loader to be gone (`--screen-delay`): it fades in as the loader's exit (0.65 s)
   // begins and is opaque before the loader lets go, so the blue swirl behind never shows.
@@ -196,6 +202,10 @@ onUnmounted(() => {
     clip-path: circle(calc(var(--lens-d) / 2) at var(--lens-cx) var(--lens-cy));
     // The lens opens like an iris once the loader is done (the same clip-path trick as the map's reveal).
     animation: lens-open 0.9s var(--lens-in) ease-out both;
+
+    video {
+      translate: var(--cam-dx) 0;
+    }
   }
 
   &-lens {
@@ -240,6 +250,7 @@ onUnmounted(() => {
 
   &-overlay {
     z-index: 35;
+    translate: var(--cam-dx) 0;
   }
 
   // Beside the lens, in the lower right corner, so they never cover it.
@@ -299,8 +310,10 @@ onUnmounted(() => {
   transition: opacity 0.4s var(--lens-in) ease;
 }
 
+// Longer than the loader's backdrop fade-in (0.3 s), so the purple loader is opaque before the lens is gone and the
+// blue home screen never shows through; the mirror of the intro's `--lens-in`.
 .lens-leave-active {
-  transition: opacity 0.3s ease;
+  transition: opacity 0.45s ease-in-out;
 }
 
 .lens-enter-from,

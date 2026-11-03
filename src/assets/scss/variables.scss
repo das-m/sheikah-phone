@@ -6,9 +6,9 @@
 */
 :root {
   // How long a new screen waits before it fades in, after a route change: the loader plays alone first and is
-  // gone before the screen starts (App.vue: LOADER_MS = 2.2 s, plus its 0.65 s exit). Right after the boot it is shorter (see
-  // `Phone-main--booting` in App.vue).
-  --screen-delay: 2.85s;
+  // gone before the screen starts (App.vue: LOADER_MS = 1.2 s, plus its 0.65 s exit). Longer for the lens and the mode switch, shorter right
+  // after the boot (see `Phone-main--lens`, `--booting` in App.vue).
+  --screen-delay: 1.85s;
   --u: clamp(0.35px, 100vmin / 860, 0.7px);
   // Base size of all text (the body); the widgets and screens scale from it in `em`.
   --font-base: 20px;

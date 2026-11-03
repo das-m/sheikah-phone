@@ -1,15 +1,22 @@
 <script setup lang="ts">
+import { computed } from 'vue'
+
 import ScanlineOverlay from '@/components/ScanlineOverlay.vue'
 import type { LoaderVariant } from '@/game/apps'
 
 // `hack`: the switch between the two modes, a "hack" of the device (see the hack part of the styles).
 // It takes the direction, since the colors and the logo turn from the old mode to the new one.
 // `variant`: the look of an app's own loader. 'lens' is the Scanner app's: the same logo and timing, in purple.
-defineProps<{
+// `flash`: the pattern behind the eye flickers up and breathes. Only for the long transitions (the boot, the lens
+// and the mode switch, which set it themselves); the ordinary one stays short.
+const props = defineProps<{
   show?: boolean
   hack?: '' | 'to-yiga' | 'to-sheikah'
   variant?: LoaderVariant
+  flash?: boolean
 }>()
+
+const isFlashing = computed(() => props.flash || !!props.hack || props.variant === 'lens')
 </script>
 
 <template>
@@ -20,6 +27,7 @@ defineProps<{
       :class="[
         'SheikahLoader',
         {
+          'SheikahLoader--flash': isFlashing,
           'SheikahLoader--hack': hack,
           [`SheikahLoader--${hack}`]: hack,
           [`SheikahLoader--${variant}`]: variant && !hack
@@ -106,9 +114,8 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
       background-position: 50% var(--pattern-y);
       filter: brightness(var(--pattern-dim)) var(--logo-shadow);
       opacity: 0.3;
-      animation:
-        pattern-in 0.9s 0.9s linear both,
-        glow-idle 2.6s 1.8s ease-in-out infinite;
+      // The ordinary transition is short (it has to stay in step with its sound): the pattern just fades in.
+      animation: pattern-soft 0.4s 0.35s ease-out backwards;
     }
 
     // The ring is only the ping that leaves the circle on entry and exit; at rest it is invisible, so the
@@ -120,6 +127,13 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
       opacity: 0;
     }
   }
+}
+
+// The special transitions (boot, lens, mode switch) run longer, so the pattern flickers up and breathes there.
+.SheikahLoader--flash .SheikahLoader-logo-pattern {
+  animation:
+    pattern-in 0.9s 0.9s linear both,
+    glow-idle 2.6s 1.8s ease-in-out infinite;
 }
 
 // Enter: the halo flares, the eye resolves out of a bright blur, the decor slides in from both sides.
@@ -235,6 +249,12 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
   to {
     opacity: 0;
     transform: translateX(10%);
+  }
+}
+
+@keyframes pattern-soft {
+  from {
+    opacity: 0;
   }
 }
 

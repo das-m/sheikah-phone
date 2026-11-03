@@ -141,14 +141,14 @@ const locations = computed(() => props.content?.locations?.split('\n').filter(Bo
     line-height: 1.3;
   }
 
-  &-text {
+  &-text,
+  &-location {
     font-size: 0.75em;
     font-weight: 300;
   }
 
   &-location {
     margin-bottom: 0.3em;
-    font-size: 1em;
   }
 
   &-status {

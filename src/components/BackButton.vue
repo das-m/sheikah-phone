@@ -1,12 +1,19 @@
 <script setup lang="ts">
 import { useRouter } from 'vue-router'
 
+import { isDirectNavigation } from '@/lib/navigation'
+
+// `home`: always lands on the home screen, even when the app was opened straight from another one (the map from the
+// scanner's "select"): then the scanner sits in between, and the history goes back over it.
+const props = defineProps<{ home?: boolean }>()
+
 const router = useRouter()
 
 // Step back through the history, so a device back right after it does not land on the app just left.
 // Without in-app history (reload, deep link) go to the home screen instead.
 function goBack() {
-  if (router.options.history.state.back) router.back()
+  if (props.home && isDirectNavigation() && router.options.history.state.back) router.go(-2)
+  else if (router.options.history.state.back) router.back()
   else router.replace({ name: 'home' })
 }
 </script>

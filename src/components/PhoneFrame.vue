@@ -134,7 +134,7 @@ const corners = ['tl', 'tr', 'br', 'bl']
     .PhoneFrame-corner,
     .PhoneFrame-strip {
       // `backwards`: the end state is the plain style, so no finished animation stays on the pieces.
-      animation: frame-stone-in 1.5s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+      animation: frame-stone-in 1s cubic-bezier(0.22, 1, 0.36, 1) backwards;
     }
   }
 
@@ -142,7 +142,7 @@ const corners = ['tl', 'tr', 'br', 'bl']
   .PhoneFrame-layer--glow {
     .PhoneFrame-corner,
     .PhoneFrame-strip {
-      animation: frame-glow-in 1.6s 1.6s linear both;
+      animation: frame-glow-in 1.6s 1.1s linear both;
     }
   }
 }

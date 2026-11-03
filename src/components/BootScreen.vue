@@ -49,7 +49,7 @@ onUnmounted(() => clearTimeout(leaveTimer))
     role="status"
     aria-label="Die Sheikah-Tafel startet"
   >
-    <SheikahLoader :show="isLogoOn" />
+    <SheikahLoader :show="isLogoOn" flash />
 
     <ScanlineOverlay :class="['Boot-scanlines', { 'Boot-scanlines--on': isScreenOn }]" />
   </div>

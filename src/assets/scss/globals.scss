@@ -125,15 +125,8 @@ html .pswp {
     );
     pointer-events: none;
 
-    h2 {
-      font-family: 'HyliaSerif';
-      font-size: 1.5em;
-      letter-spacing: 1px;
-      text-shadow: 0 0 8px var(--color-primary);
-    }
-
     p {
-      margin-top: 0.4em;
+      margin: 0;
       font-size: 0.85em;
       font-style: italic;
       color: var(--color-contrast);

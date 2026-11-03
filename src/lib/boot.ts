@@ -29,7 +29,7 @@ export interface BootTiming {
 export const BOOT_TIMING: BootTiming = {
   frameAtMs: 900,
   frameWaitMaxMs: 3000,
-  screenAfterFrameMs: 3200,
+  screenAfterFrameMs: 2700,
   logoAfterScreenMs: 1000,
   minAfterLogoMs: 2000,
   maxMs: 10000

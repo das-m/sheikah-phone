@@ -1,5 +1,4 @@
 export interface MediaImage {
-  title?: string | null
   description?: string | null
   largeURL?: string
   thumbnailURL?: string

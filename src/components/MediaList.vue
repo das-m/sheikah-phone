@@ -39,11 +39,9 @@ onMounted(() => {
         onInit: (el, pswp) => {
           pswp.on('change', () => {
             const anchor = pswp.currSlide?.data.element
-            const title = document.createElement('h2')
-            title.textContent = anchor?.dataset.title ?? ''
             const description = document.createElement('p')
             description.textContent = anchor?.dataset.description ?? ''
-            el.replaceChildren(title, description)
+            el.replaceChildren(description)
           })
         }
       })
@@ -69,7 +67,6 @@ onUnmounted(() => {
       :href="image.largeURL"
       :data-pswp-width="image.width"
       :data-pswp-height="image.height"
-      :data-title="image.title"
       :data-description="image.description"
       class="MediaList-item"
       target="_blank"

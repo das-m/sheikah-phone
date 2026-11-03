@@ -22,9 +22,11 @@ const isBooted = ref(false)
 const isFrameOn = ref(false)
 
 // loader between apps
-// The logo arrives in 0.75 s, the pattern flickers up between 0.9 s and 1.8 s: this keeps the finished logo,
-// with its glow, on screen for a moment before it leaves.
-const LOADER_MS = 2200
+// The ordinary transition: it stays close to the length of its open / close sound.
+const LOADER_MS = 1200
+// The lens (and the boot and the mode switch) run longer: the pattern behind the eye flickers up between 0.9 s and
+// 1.8 s, and the finished logo, with its glow, stays on screen for a moment before it leaves.
+const LOADER_LENS_MS = 2200
 // The switch between the modes is longer: the "hack" of the loader (SheikahLoader) runs for about 3.6 s. The
 // screen after it waits for this and the loader's exit (`--screen-delay` while `Phone-main--hacking`, below).
 const HACK_MS = 3600
@@ -54,7 +56,7 @@ watch(
 
     // Leaving an app plays its loader too, so the lens closes in purple as well.
     loaderVariant.value = loaderVariantFor(route.path) || loaderVariantFor(oldPath)
-    show()
+    show(loaderVariant.value === 'lens' ? LOADER_LENS_MS : LOADER_MS)
     if (route.name == 'home') playClose(mode.value, loaderVariant.value)
     else playOpen(mode.value, loaderVariant.value)
   }
@@ -94,6 +96,7 @@ watch(mode, (value) => {
         'Phone-main',
         {
           'Phone-main--booting': isBooting,
+          'Phone-main--lens': loaderVariant === 'lens',
           'Phone-main--hacking': hack,
           'Phone-main--direct': isDirect
         }
@@ -130,6 +133,11 @@ watch(mode, (value) => {
     // The first screen is mounted while the boot screen dissolves (1.2 s), so it has less to wait for.
     &--booting {
       --screen-delay: 1s;
+    }
+
+    // To or from the lens: its loader runs longer (LOADER_LENS_MS = 2.2 s, plus the 0.65 s exit).
+    &--lens {
+      --screen-delay: 2.85s;
     }
 
     // Straight from another app: only the app that leaves fades out (0.3 s), then the new one starts its own intro.
