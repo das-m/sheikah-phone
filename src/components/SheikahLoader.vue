@@ -14,6 +14,8 @@ const props = defineProps<{
   hack?: '' | 'to-yiga' | 'to-sheikah'
   variant?: LoaderVariant
   flash?: boolean
+  // With the lens variant: leaving it, so the colors go from purple back to blue.
+  reverse?: boolean
 }>()
 
 const isFlashing = computed(() => props.flash || !!props.hack || props.variant === 'lens')
@@ -30,7 +32,8 @@ const isFlashing = computed(() => props.flash || !!props.hack || props.variant =
           'SheikahLoader--flash': isFlashing,
           'SheikahLoader--hack': hack,
           [`SheikahLoader--${hack}`]: hack,
-          [`SheikahLoader--${variant}`]: variant && !hack
+          [`SheikahLoader--${variant}`]: variant && !hack,
+          'SheikahLoader--reverse': reverse
         }
       ]"
     >
@@ -327,16 +330,36 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
   }
 }
 
-// The lens (Scanner app): the logo is tinted like Yiga mode's, but to purple (blue is ~192deg, the lens purple ~263deg;
-// by eye, tune on a phone), the backdrop is purple, and the ring pings a second time on entry, as if the lens focused.
-// Timing is the default one, so nothing outside this block changes.
+// The lens (Scanner app): like the hack, the colors change in the middle of the transition, together with the pattern's
+// flicker (0.9 s): the logo is tinted to purple (blue is ~192deg, the lens purple ~263deg; by eye, tune on a phone) and
+// a purple backdrop fades in over the blue one. `reverse` (leaving the lens) goes from purple back to blue. The end state
+// is the look of the app on the side of the transition, so nothing jumps when the loader goes. The ring pings a second
+// time on entry, as if the lens focused.
 .SheikahLoader--lens {
   --lens-hue: 70deg;
 
-  background: radial-gradient(circle at center, rgba(34, 12, 66, 0.65), rgba(0, 0, 0, 0.8) 85%);
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at center, rgba(34, 12, 66, 0.65), rgba(0, 0, 0, 0.8) 85%);
+    opacity: 0;
+    animation: hack-tint-in 0.9s 0.9s ease-in-out both;
+  }
 
   .SheikahLoader-logo {
-    filter: hue-rotate(var(--lens-hue));
+    animation: lens-hue-in 0.9s 0.9s ease-in-out both;
+  }
+
+  &.SheikahLoader--reverse {
+    &::before {
+      opacity: 1;
+      animation-name: hack-tint-out;
+    }
+
+    .SheikahLoader-logo {
+      animation-name: lens-hue-out;
+    }
   }
 
   // The second ping has no fill, so it does not hold the ring's opacity before it starts.
@@ -344,6 +367,24 @@ $ease-out: cubic-bezier(0.16, 1, 0.3, 1);
     animation:
       ring-ping 0.8s 0.3s ease-out both,
       ring-ping 0.8s 1.1s ease-out;
+  }
+}
+
+@keyframes lens-hue-in {
+  from {
+    filter: hue-rotate(0deg);
+  }
+  to {
+    filter: hue-rotate(var(--lens-hue));
+  }
+}
+
+@keyframes lens-hue-out {
+  from {
+    filter: hue-rotate(var(--lens-hue));
+  }
+  to {
+    filter: hue-rotate(0deg);
   }
 }
 

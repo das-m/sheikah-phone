@@ -81,7 +81,7 @@ onUnmounted(() => {
 <style lang="scss" scoped>
 // The frame art has its line ~18px inside its edge, so the photo sits in 24px padding and keeps the 340x190 ratio.
 .MediaList {
-  margin: 8em 0;
+  margin: 5em 0;
   padding: 0 1px;
   gap: 1em;
   // Two columns. Cells never grow past the item width and shrink with the screen (minmax 0), so a narrow

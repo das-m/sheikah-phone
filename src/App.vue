@@ -36,6 +36,8 @@ const hack = ref<'' | 'to-yiga' | 'to-sheikah'>('')
 const loaderVariant = ref<LoaderVariant>('')
 // An app opened straight from another one (the scanner's "select" to the map): no loader and no sound; the new app starts its intro right after the old one has faded out.
 const isDirect = ref(false)
+// The loader is the one of the app that is left (the lens back to home): its colors go back to the home screen's.
+const isLeavingVariant = ref(false)
 const route = useRoute()
 
 watch(
@@ -54,8 +56,9 @@ watch(
       return
     }
 
-    // Leaving an app plays its loader too, so the lens closes in purple as well.
+    // Leaving an app plays its loader too, so the lens closes with the same color change, backwards.
     loaderVariant.value = loaderVariantFor(route.path) || loaderVariantFor(oldPath)
+    isLeavingVariant.value = route.name === 'home'
     show(loaderVariant.value === 'lens' ? LOADER_LENS_MS : LOADER_MS)
     if (route.name == 'home') playClose(mode.value, loaderVariant.value)
     else playOpen(mode.value, loaderVariant.value)
@@ -103,7 +106,12 @@ watch(mode, (value) => {
       ]"
       id="main"
     >
-      <SheikahLoader :show="showLoader" :hack="hack" :variant="loaderVariant" />
+      <SheikahLoader
+        :show="showLoader"
+        :hack="hack"
+        :variant="loaderVariant"
+        :reverse="isLeavingVariant"
+      />
       <!-- keyed by the mode: the screen is built again after a switch, so it comes up after the transition -->
       <RouterView v-if="isBooted" :key="mode" />
       <BootScreen
