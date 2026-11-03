@@ -1,5 +1,6 @@
 import type { FairyConfig } from '@/lib/fairyBrain'
 import type { LatLng } from '@/lib/geo'
+import type { Zone } from '@/lib/zone'
 
 /**
  * How the fairy plays with the player. All times in seconds, angles in degrees, distances in metres around the head.
@@ -47,3 +48,6 @@ export const fairyConfig: FairyConfig = {
 
 /** Where the befriended fairy points to. Test coordinates. */
 export const fairyGuideTarget: LatLng = { lat: 48.7886009, lng: 9.1758919 }
+
+/** She only shows up in the camera app while the player is inside this zone (the radius is a guess to tune outdoors). */
+export const fairyZone: Zone = { center: fairyGuideTarget, radiusMeters: 40 }
