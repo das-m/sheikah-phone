@@ -76,14 +76,13 @@ export function findSensor(id: string): SensorEvent | null {
 /** How the sensor beeps (see `lib/sensorBeep.ts`). Untested on a real phone: tune there. */
 export const sensorTuning: BeepTuning = {
   nearMeters: 10,
-  farMeters: 500,
+  farMeters: 3000,
   fastIntervalMs: 300,
   slowIntervalMs: 2500,
   curve: 0.6,
   facingIntervalFactor: 0.7,
-  farVolume: 0.25,
+  farVolume: 0.12,
   nearVolume: 1,
-  offCourseVolume: 0.5,
   foundMeters: 10,
   foundIntervalMs: 250
 }

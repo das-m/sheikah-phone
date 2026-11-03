@@ -17,11 +17,9 @@ export interface BeepTuning {
   curve: number
   /** The interval is multiplied by this while the phone points at the target (< 1: faster). */
   facingIntervalFactor: number
-  /** Volume at `farMeters` and at `nearMeters`, 0..1. */
+  /** Volume at `farMeters` and at `nearMeters`, 0..1. `farVolume` is the cap for far targets: quiet, but audible. */
   farVolume: number
   nearVolume: number
-  /** The volume is multiplied by this while the phone does not point at the target. */
-  offCourseVolume: number
   /** Closer than this the target is found: full volume and `foundIntervalMs`, whichever way the phone points. */
   foundMeters: number
   foundIntervalMs: number
@@ -47,9 +45,20 @@ export function beepIntervalMs(distance: number, facing: boolean, tuning: BeepTu
 }
 
 /** Volume of a beep, 0..1. */
-export function beepVolume(distance: number, facing: boolean, tuning: BeepTuning): number {
+export function beepVolume(distance: number, tuning: BeepTuning): number {
   if (isFound(distance, tuning)) return tuning.nearVolume
   const t = closeness(distance, tuning)
-  const volume = tuning.nearVolume + (tuning.farVolume - tuning.nearVolume) * t
-  return facing ? volume : volume * tuning.offCourseVolume
+  return tuning.nearVolume + (tuning.farVolume - tuning.nearVolume) * t
+}
+
+/** The beep only sounds while the phone points at the target, except inside the found radius. */
+export function isBeepAudible(distance: number, facing: boolean, tuning: BeepTuning): boolean {
+  return facing || isFound(distance, tuning)
+}
+
+/** A rounded distance for the HUD, always in metres: "ca. 1300 m". */
+export function formatApproxDistance(meters: number): string {
+  const step = meters < 50 ? 5 : meters < 200 ? 10 : meters < 1000 ? 50 : 100
+  const rounded = Math.max(step, Math.round(meters / step) * step)
+  return `ca. ${rounded} m`
 }

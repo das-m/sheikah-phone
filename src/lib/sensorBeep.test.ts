@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { beepIntervalMs, beepVolume, isFound, type BeepTuning } from './sensorBeep'
+import {
+  beepIntervalMs,
+  beepVolume,
+  formatApproxDistance,
+  isBeepAudible,
+  isFound,
+  type BeepTuning
+} from './sensorBeep'
 
 const tuning: BeepTuning = {
   nearMeters: 10,
@@ -10,7 +17,6 @@ const tuning: BeepTuning = {
   facingIntervalFactor: 0.7,
   farVolume: 0.25,
   nearVolume: 1,
-  offCourseVolume: 0.5,
   foundMeters: 5,
   foundIntervalMs: 250
 }
@@ -49,35 +55,53 @@ describe('beepIntervalMs', () => {
 
 describe('beepVolume', () => {
   it('is quiet far away and full up close', () => {
-    expect(beepVolume(510, true, tuning)).toBeCloseTo(0.25)
-    expect(beepVolume(10, true, tuning)).toBeCloseTo(1)
+    expect(beepVolume(510, tuning)).toBeCloseTo(0.25)
+    expect(beepVolume(10, tuning)).toBeCloseTo(1)
   })
 
   it('only gets louder the closer you get', () => {
     let last = 0
     for (let d = 600; d >= 6; d -= 7) {
-      const volume = beepVolume(d, true, tuning)
+      const volume = beepVolume(d, tuning)
       expect(volume).toBeGreaterThanOrEqual(last)
       last = volume
     }
   })
 
-  it('is quieter while the phone points elsewhere', () => {
-    expect(beepVolume(200, false, tuning)).toBeCloseTo(beepVolume(200, true, tuning) * 0.5)
-  })
-
   it('is full inside the found radius', () => {
-    expect(beepVolume(3, false, tuning)).toBe(1)
+    expect(beepVolume(3, tuning)).toBe(1)
   })
 
   it('stays within 0..1', () => {
     for (const d of [0, 3, 10, 100, 510, 5000]) {
-      for (const facing of [true, false]) {
-        const volume = beepVolume(d, facing, tuning)
-        expect(volume).toBeGreaterThanOrEqual(0)
-        expect(volume).toBeLessThanOrEqual(1)
-      }
+      const volume = beepVolume(d, tuning)
+      expect(volume).toBeGreaterThanOrEqual(0)
+      expect(volume).toBeLessThanOrEqual(1)
     }
+  })
+})
+
+describe('isBeepAudible', () => {
+  it('needs the phone to point at the target', () => {
+    expect(isBeepAudible(200, true, tuning)).toBe(true)
+    expect(isBeepAudible(200, false, tuning)).toBe(false)
+  })
+
+  it('is always audible inside the found radius', () => {
+    expect(isBeepAudible(3, false, tuning)).toBe(true)
+  })
+})
+
+describe('formatApproxDistance', () => {
+  it('rounds more coarsely the farther away', () => {
+    expect(formatApproxDistance(23)).toBe('ca. 25 m')
+    expect(formatApproxDistance(137)).toBe('ca. 140 m')
+    expect(formatApproxDistance(430)).toBe('ca. 450 m')
+    expect(formatApproxDistance(1234)).toBe('ca. 1200 m')
+  })
+
+  it('never shows zero', () => {
+    expect(formatApproxDistance(0)).toBe('ca. 5 m')
   })
 })
 

@@ -3,7 +3,7 @@ import * as maplibregl from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 // MapLibre looks for its worker next to its own module, which does not exist once bundled.
 import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?url'
-import { onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 
 import soundMapLoad from '@/assets/audio/map-load.wav'
 import soundSensorActivate from '@/assets/audio/sensor-activate.ogg'
@@ -20,6 +20,7 @@ import { areaLabelMaxZoom, areas, poiLevels, pois, regions } from '@/game/marker
 import type { Area, Poi, Region, Visibility } from '@/game/markers'
 import { playSound } from '@/lib/audio'
 import { metersPerPixel } from '@/lib/geo'
+import { formatApproxDistance } from '@/lib/sensorBeep'
 import type { LatLng } from '@/lib/geo'
 import { zoomOpacity } from '@/lib/zoomVisibility'
 import { zeldaStyle } from '@/map/zeldaStyle'
@@ -40,7 +41,12 @@ const { heading } = useHeading()
 
 // Sensor mode: the scanner selects a sensor, it beeps while the map is open, the HUD switches it off and on.
 const { selected: selectedSensor, active: activeSensor, toggle: toggleSensor } = useSensorMode()
-const { beepCount } = useSensorBeeper()
+const { beepCount, distance: sensorDistance } = useSensorBeeper()
+const sensorDistanceText = computed(() =>
+  activeSensor.value?.location && sensorDistance.value !== null
+    ? formatApproxDistance(sensorDistance.value)
+    : null
+)
 // The sensor icon lights up with every beep.
 const SENSOR_PULSE_MS = 150
 const isSensorPulsing = ref(false)
@@ -323,6 +329,9 @@ function centerMapOnUser() {
       >
         <span class="App-map-sensor-text" aria-hidden="true">
           <span class="App-map-sensor-name">{{ activeSensor ? activeSensor.name : 'Aus' }}</span>
+          <span v-if="sensorDistanceText" class="App-map-sensor-distance">{{
+            sensorDistanceText
+          }}</span>
           <span class="App-map-sensor-label">Sensor</span>
         </span>
         <button
@@ -701,6 +710,12 @@ $settle-delay: 0.6s;
         font-size: 1.55em;
         font-weight: 400;
         line-height: 1.2;
+      }
+
+      &-distance {
+        font-size: 0.95em;
+        line-height: 1.1;
+        opacity: 0.85;
       }
 
       &-label {
