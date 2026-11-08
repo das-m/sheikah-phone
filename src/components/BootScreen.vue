@@ -4,8 +4,7 @@ import { onUnmounted, ref, watch } from 'vue'
 import ScanlineOverlay from '@/components/ScanlineOverlay.vue'
 import SheikahLoader from '@/components/SheikahLoader.vue'
 import { useBoot } from '@/composables/useBoot'
-import { useYigaMode } from '@/composables/useYigaMode'
-import { playOpen } from '@/lib/uiSounds'
+import { playBoot } from '@/lib/uiSounds'
 
 // `ready`: the boot is over and the screen starts to dissolve (the home screen can be mounted under it).
 // `done`: the dissolve is over and the screen can be removed.
@@ -15,7 +14,6 @@ const emit = defineEmits<{ frame: []; ready: []; done: [] }>()
 // Keep in step with `boot-out` below.
 const LEAVE_MS = 1200
 
-const { mode } = useYigaMode()
 const { isLogoOn, isScreenOn, isFrameOn, isFinished } = useBoot()
 
 // The screen starts black. The frame draws in first and its glow blinks on; then the screen turns on (the tube
@@ -24,13 +22,12 @@ const { isLogoOn, isScreenOn, isFrameOn, isFinished } = useBoot()
 const isLeaving = ref(false)
 let leaveTimer: ReturnType<typeof setTimeout> | undefined
 
+// The boot sound starts with the frame and runs under the whole sequence. Without a prior tap it makes no sound,
+// except in the installed app.
 watch(isFrameOn, (on) => {
-  if (on) emit('frame')
-})
-
-// Without a prior tap this makes no sound, except in the installed app.
-watch(isLogoOn, (on) => {
-  if (on) playOpen(mode.value)
+  if (!on) return
+  emit('frame')
+  playBoot()
 })
 
 watch(isFinished, (finished) => {

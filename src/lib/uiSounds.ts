@@ -7,6 +7,7 @@ import soundOpenReversed from '@/assets/audio/open-reversed.ogg'
 import soundCloseReversed from '@/assets/audio/close-reversed.ogg'
 import soundLensOpen from '@/assets/audio/lens-open.ogg'
 import soundLensClose from '@/assets/audio/lens-close.ogg'
+import soundBoot from '@/assets/audio/boot.ogg'
 
 const sources: Record<'open' | 'close', Record<AppMode, string>> = {
   open: { sheikah: soundOpen, yiga: soundOpenReversed },
@@ -26,6 +27,13 @@ function sound(kind: 'open' | 'close', mode: AppMode, variant: LoaderVariant) {
   let audio = cache.get(src)
   if (!audio) cache.set(src, (audio = new Audio(src)))
   return audio
+}
+
+/** The cold-start sound, played once under the boot sequence. */
+export const playBoot = () => {
+  let audio = cache.get(soundBoot)
+  if (!audio) cache.set(soundBoot, (audio = new Audio(soundBoot)))
+  return playSound(audio)
 }
 
 /** Open / close sounds of the shell; Yiga mode plays them reversed, an app's own `variant` plays its own. */
