@@ -524,6 +524,17 @@ describe('skip, reset and robustness', () => {
   })
 })
 
+describe('startGuide', () => {
+  it('goes straight to the guide, without the story and its voices', () => {
+    const brain = createFairyBrain(config, seededRng())
+    const r = makeRun(brain)
+    brain.startGuide()
+    expect(r.run(DT, fixed(north)).phase).toBe('guide')
+    expect(r.events).not.toContain('hello')
+    expect(r.run(5, fixed(north), 90).phase).toBe('guide')
+  })
+})
+
 describe('helpers', () => {
   it('reads the compass azimuth of a vector', () => {
     expect(azimuthDeg({ x: 0, y: 1, z: 0 })).toBeCloseTo(0)

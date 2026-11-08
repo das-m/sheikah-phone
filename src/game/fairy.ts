@@ -50,4 +50,4 @@ export const fairyConfig: FairyConfig = {
 export const fairyGuideTarget: LatLng = { lat: 48.7886009, lng: 9.1758919 }
 
 /** She only shows up in the camera app while the player is inside this zone (the radius is a guess to tune outdoors). */
-export const fairyZone: Zone = { center: fairyGuideTarget, radiusMeters: 40 }
+export const fairyZone: Zone = { center: fairyGuideTarget, radiusMeters: 200 }

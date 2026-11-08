@@ -187,6 +187,7 @@ export function createFairyBrain(config: FairyConfig, rng: () => number = Math.r
   let speed = 0
   let jumped = false
   let skipRequested = false
+  let guideRequested = false
   let events: FairyEvent[] = []
 
   function resetHold() {
@@ -330,6 +331,11 @@ export function createFairyBrain(config: FairyConfig, rng: () => number = Math.r
     const dt = clamp(input.dt, 0, MAX_DT)
     const { view } = input
     events = []
+    if (guideRequested) {
+      guideRequested = false
+      met = true
+      enterGuide(view)
+    }
     if (skipRequested) {
       skipRequested = false
       skipStage(view)
@@ -503,6 +509,10 @@ export function createFairyBrain(config: FairyConfig, rng: () => number = Math.r
     step,
     skip() {
       skipRequested = true
+    },
+    /** Starts her as the guide at once (she was befriended before): takes effect on the next `step`. */
+    startGuide() {
+      guideRequested = true
     },
     reset
   }

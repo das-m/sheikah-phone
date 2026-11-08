@@ -5,6 +5,7 @@ import { useRoute } from 'vue-router'
 import BackButton from '@/components/BackButton.vue'
 import FairyOverlay from '@/components/FairyOverlay.vue'
 import { useCamera } from '@/composables/useCamera'
+import { fairyBefriended } from '@/composables/useFairyProgress'
 import { useGeolocation } from '@/composables/useGeolocation'
 import { fairyZone } from '@/game/fairy'
 import { playSound } from '@/lib/audio'
@@ -33,7 +34,18 @@ watch([position, accuracy], () => {
   )
 })
 const route = useRoute()
-const showFairy = computed(() => isInFairyZone.value || route.query.fairy !== undefined)
+// The zone only decides where the first contact happens: once she is there she stays (leaving the zone mid-story does
+// not take her away), and a befriended guide is shown everywhere.
+const hasSpawned = ref(false)
+const mayAppear = computed(() => isInFairyZone.value || route.query.fairy !== undefined)
+watch(
+  mayAppear,
+  (may) => {
+    if (may) hasSpawned.value = true
+  },
+  { immediate: true }
+)
+const showFairy = computed(() => hasSpawned.value || mayAppear.value || fairyBefriended.value)
 </script>
 
 <template>

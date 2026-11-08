@@ -2,6 +2,7 @@
 import { onMounted, onUnmounted, ref } from 'vue'
 
 import { useCompass } from '@/composables/useCompass'
+import { fairyBefriended } from '@/composables/useFairyProgress'
 import { useFairySound } from '@/composables/useFairySound'
 import { useOrientation } from '@/composables/useOrientation'
 import { fairyConfig, fairyGuideTarget } from '@/game/fairy'
@@ -53,6 +54,8 @@ const orientation = useOrientation()
 const compass = useCompass(fairyGuideTarget)
 const sound = useFairySound()
 const brain = createFairyBrain(fairyConfig)
+// Befriended earlier: she is the guide from the start.
+if (fairyBefriended.value) brain.startGuide()
 
 // TODO(fairy): temporary test link that skips to the next phase. Remove it, or show it in dev builds only.
 const phaseLabel = ref('')
@@ -192,6 +195,7 @@ onMounted(() => {
       viewport: viewportTangents(width, height, CAMERA_VFOV_DEG),
       guideAzimuth: bearing !== null && offset !== null ? normalizeDegrees(bearing - offset) : null
     })
+    fairyBefriended.value = out.phase === 'guide'
     const toCamera = transformFromBasis(basis)
     const camera = toCamera(out.position)
 
