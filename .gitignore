@@ -30,7 +30,7 @@ coverage
 *.tsbuildinfo
 
 # Windows/WSL download markers
-*:Zone.Identifier
+*Zone.Identifier
 
 # generated service worker (dev)
 dev-dist
