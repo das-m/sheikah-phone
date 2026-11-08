@@ -13,7 +13,7 @@ describe('scanTargets', () => {
     for (const { id } of scanTargets) expect(id).toMatch(/^\d{1,17}$/)
   })
 
-  it('numbers the nine targets 01 to 09', () => {
+  it('numbers the ten targets 01 to 10', () => {
     expect(scanTargets.map((target) => target.id)).toEqual([
       '01',
       '02',
@@ -23,7 +23,8 @@ describe('scanTargets', () => {
       '06',
       '07',
       '08',
-      '09'
+      '09',
+      '10'
     ])
   })
 })
@@ -45,13 +46,11 @@ describe('sensors', () => {
     }
   })
 
-  it('keeps sensor locations in the Ludwigsburg / Stuttgart area', () => {
+  it('keeps sensor locations on the globe', () => {
     for (const { location } of sensors) {
       if (!location) continue
-      expect(location.lat).toBeGreaterThan(48.7)
-      expect(location.lat).toBeLessThan(49.0)
-      expect(location.lng).toBeGreaterThan(9.0)
-      expect(location.lng).toBeLessThan(9.4)
+      expect(Math.abs(location.lat)).toBeLessThanOrEqual(90)
+      expect(Math.abs(location.lng)).toBeLessThanOrEqual(180)
     }
   })
 })

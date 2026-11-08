@@ -1,3 +1,13 @@
+import plant1 from '@/assets/images/plants/Electric_Safflina_Icon.png'
+import plant2 from '@/assets/images/plants/Hyrule Herb_Icon.png'
+import plant3 from '@/assets/images/plants/Warm_Safflina_Icon.png'
+import plant4 from '@/assets/images/plants/Armoranth_Icon.png'
+import plant5 from '@/assets/images/plants/Mighty_Thistle_Icon.png'
+import plant6 from '@/assets/images/plants/Fleet-Lotus Seed_Icon.png'
+import plant7 from '@/assets/images/plants/Swift_Violet_Icon.png'
+import plant8 from '@/assets/images/plants/Silent_Princess_Icon.png'
+import plant9 from '@/assets/images/plants/Blue_Nightshade_Icon.png'
+import plant10 from '@/assets/images/plants/Cool_Safflina_Icon.png'
 import type { LatLng } from '@/lib/geo'
 import type { BeepTuning } from '@/lib/sensorBeep'
 
@@ -33,44 +43,115 @@ export interface SensorEvent {
 }
 
 /**
- * The one file to edit for the content of the sensor events. Placeholders: set the real texts and places before the hunt.
- * The scanner gets its targets from here (`game/scanTargets.ts`): one per event, the QR code of `id` triggers it.
+ * The one file to edit for the content of the sensor events: the plants of `plants.md` (Zelda names, texts and regions;
+ * the cooking effect is not shown). The scanner gets its targets from here (`game/scanTargets.ts`): one per event, the QR
+ * code of `id` triggers it. The targets (`location`) and the extinct plants (`unavailable`) come from `plants.md`; 01 still has a test position.
  */
 export const sensors: SensorEvent[] = [
   {
     id: '01',
-    name: 'Pflanze 1',
-    description: 'Hier steht später, was die Tafel über dieses Ereignis verrät.',
-    commonLocations: 'Rund um das Residenzschloss.',
+    name: 'Zitterkraut',
+    image: plant1,
+    description:
+      'Diese Heilpflanze ist in der Gerudo-Wüste heimisch. Ihre speziellen energieableitenden Fasern verleihen als Kochzutat Resistenz gegen Elektrizität.',
+    commonLocations: 'Gerudo-Wüste\nHyrule-Gebirge',
     status: 'available',
     location: { lat: 48.7802009, lng: 9.1792001 }
   },
   {
     id: '02',
-    name: 'Pflanze 2',
-    description: 'Hier steht später, was die Tafel über dieses Ereignis verrät.',
-    commonLocations: 'In der Nähe des Marktplatzes.',
-    status: 'available',
-    location: { lat: 48.8947, lng: 9.192 }
+    name: 'Hyrule-Gras',
+    image: plant2,
+    description:
+      'Ein äußerst nahrhaftes Kraut, das überall auf Hyrules Ebenen wächst. Als Kochzutat füllt es noch mehr Herzen auf.',
+    commonLocations: 'Ebene von Hyrule\nAkkala-Hochebene',
+    status: 'unavailable',
+    statusText: 'Ausgestorben (Sensor nicht möglich)'
   },
   {
     id: '03',
-    name: 'Pflanze 3',
-    description: 'Hier steht später, was die Tafel über dieses Ereignis verrät.',
-    commonLocations: 'Nur im Sommer zu finden.',
+    name: 'Glutkraut',
+    image: plant3,
+    description:
+      'Eine Heilpflanze aus warmen Gebieten, etwa der Gerudo-Region. Als Kochzutat verleiht sie kurzzeitig Kälte-Resistenz.',
+    commonLocations: 'Gerudo-Wüste\nHyrule-Gebirge',
     status: 'unavailable',
-    statusText: 'Außerhalb der Saison.'
+    statusText: 'Ausgestorben (Sensor nicht möglich)'
   },
-  ...Array.from({ length: 6 }, (_, i): SensorEvent => {
-    const n = i + 4
-    return {
-      id: String(n).padStart(2, '0'),
-      name: `Pflanze ${n}`,
-      description: 'Hier steht später, was die Tafel über dieses Ereignis verrät.',
-      commonLocations: 'Hier steht später, wo man sie findet.',
-      status: 'available'
-    }
-  })
+  {
+    id: '04',
+    name: 'Rüstgras',
+    image: plant4,
+    description:
+      'Eine robuste Heilpflanze, die nicht abbricht, wenn man auf sie tritt. Ihre festen, aber flexiblen Fasern erhöhen die Abwehr, wenn man sie Gerichten untermischt.',
+    commonLocations: 'Akkala-Hochebene\nHyrule-Gebirge',
+    status: 'available',
+    location: { lat: 36.581105, lng: 84.634203 },
+    decoy: true
+  },
+  {
+    id: '05',
+    name: 'Schwertgras',
+    image: plant5,
+    description:
+      'Diese Heilpflanze weist spitze Dornen an Blättern und Frucht auf. Sie enthält Vitamine, welche die Körperkraft erhöhen. Als Zutat verleiht sie einen Bonus auf Angriffskraft.',
+    commonLocations: 'West-Necluda\nPrärie von Phirone',
+    status: 'available',
+    location: { lat: 58.939224, lng: 85.051683 },
+    decoy: true
+  },
+  {
+    id: '06',
+    name: 'Spurtlotos',
+    image: plant6,
+    description:
+      'Lotosfrüchte findet man in seichten Wassern. Ihre Nährstoffe ziehen sie mit langen Wurzeln aus dem Boden. Als Kochzutat steigern sie die Fortbewegungsgeschwindigkeit.',
+    commonLocations: 'Sumpf von Ranelle\nQuellen von Ranelle',
+    status: 'available',
+    location: { lat: -3.972795, lng: 141.916917 },
+    decoy: true
+  },
+  {
+    id: '07',
+    name: 'Spurtveilchen',
+    image: plant7,
+    description:
+      'Eine essbare Blume, die an Abhängen wächst und reich an wichtigen Mineralien ist. Als Kochzutat verhelfen diese zu einer verbesserten Laufgeschwindigkeit.',
+    commonLocations: 'Gerudo-Hochebene\nHebra-Berge',
+    status: 'available',
+    location: { lat: -29.400388, lng: -70.07527 },
+    decoy: true
+  },
+  {
+    id: '08',
+    name: 'Prinzessinnen-Enzian',
+    image: plant8,
+    description:
+      'Dies soll die Lieblingsblume der Prinzessin von Hyrule gewesen sein. Man hielt sie für ausgestorben, doch in den letzten Jahren wurden wieder ein paar Exemplare gefunden.',
+    commonLocations: 'Akkala-Hochebene\nHyrule-Gebirge',
+    status: 'available',
+    location: { lat: 48.902331, lng: 9.183109 }
+  },
+  {
+    id: '09',
+    name: 'Schleichglöckchen',
+    image: plant9,
+    description:
+      'Eine Blume, die in Wäldern und auf Wiesen zu finden ist. Nachts gibt sie ein schwaches Licht ab. Als Kochzutat verleiht sie die Fähigkeit, lautlos zu schleichen.',
+    commonLocations: 'West-Necluda\nQuellen von Ranelle',
+    status: 'unavailable',
+    statusText: 'Ausgestorben (Sensor nicht möglich)'
+  },
+  {
+    id: '10',
+    name: 'Frostkraut',
+    image: plant10,
+    description:
+      'Eine Heilpflanze, die in großen Höhen wächst, etwa in den Bergen von Hebra und Gerudo. Als Kochzutat entfaltet das Kraut einen Hitzeschutz-Effekt.',
+    commonLocations: 'Hebra-Berge\nGerudo-Hochebene',
+    status: 'unavailable',
+    statusText: 'Ausgestorben (Sensor nicht möglich)'
+  }
 ]
 
 /** The sensor event of a QR id, or null. */
